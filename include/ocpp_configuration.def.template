@@ -1,0 +1,66 @@
+/* CONF(name, accessibility, type, default value) */
+
+CONF(AllowOfflineTxForUnknownId,		RW,	bool,		0)
+CONF(AuthorizationCacheEnabled,			RW,	bool,		0)
+CONF(AuthorizeRemoteTxRequests,			RW,	bool,		true)
+CONF(BlinkRepeat,				RW,	int,		0)
+CONF(ClockAlignedDataInterval,			RW,	int,		0)
+CONF(ConnectionTimeOut,				RW,	int,		180)
+CONF(ConnectorPhaseRotation,			RW,	CSL,		0)
+CONF(ConnectorPhaseRotationMaxLength,		R,	int,		0)
+CONF(GetConfigurationMaxKeys,			R,	int,		CONFIGURATION_MAX)
+CONF(HeartbeatInterval,				RW,	int,		1800)
+CONF(LightIntensity,				RW,	int,		0)
+CONF(LocalAuthorizeOffline,			RW,	bool,		0)
+CONF(LocalPreAuthorize,				RW,	bool,		0)
+CONF(MaxEnergyOnInvalidId,			RW,	int,		0)
+CONF(MeterValuesAlignedData,			RW,	CSL,		OCPP_MEASURAND_ENERGY_ACTIVE_IMPORT_REGISTER)
+CONF(MeterValuesAlignedDataMaxLength,		R,	int,		0)
+CONF(MeterValuesSampledData,			RW,	CSL,		OCPP_MEASURAND_ENERGY_ACTIVE_IMPORT_REGISTER)
+CONF(MeterValuesSampledDataMaxLength,		R,	int,		0)
+CONF(MeterValueSampleInterval,			RW,	int,		300)
+CONF(MinimumStatusDuration,			RW,	int,		0)
+CONF(NumberOfConnectors,			R,	int,		1)
+CONF(ResetRetries,				RW,	int,		0)
+CONF(StopTransactionOnEVSideDisconnect,		RW,	bool,		true)
+CONF(StopTransactionOnInvalidId,		RW,	bool,		false)
+CONF(StopTxnAlignedData,			RW,	CSL,		0)
+CONF(StopTxnAlignedDataMaxLength,		R,	int,		0)
+CONF(StopTxnSampledData,			RW,	CSL,		0)
+CONF(StopTxnSampledDataMaxLength,		R,	int,		0)
+CONF(SupportedFeatureProfiles,			R,	CSL,		0)
+CONF(SupportedFeatureProfilesMaxLength,		R,	int,		0)
+CONF(TransactionMessageAttempts,		RW,	int,		3)
+CONF(TransactionMessageRetryInterval,		RW,	int,		60)
+CONF(UnlockConnectorOnEVSideDisconnect,		RW,	bool,		0)
+CONF(WebSocketPingInterval,			RW,	int,		0)
+
+/* Local Auth List Management Profile */
+CONF(LocalAuthListEnabled,			RW,	bool,		0)
+CONF(LocalAuthListMaxLength,			R,	int,		0)
+CONF(SendLocalListMaxLength,			R,	int,		0)
+
+/* Reservation Profile */
+CONF(ReserveConnectorZeroSupported,		R,	bool,		0)
+
+/* Smart Charging Profile */
+CONF(ChargeProfileMaxStackLevel,		R,	int,		0)
+CONF(ChargingScheduleAllowedChargingRateUnit,	R,	CSL,		0)
+CONF(ChargingScheduleMaxPeriods,		R,	int,		0)
+CONF(ConnectorSwitch3to1PhaseSupported,		R,	bool,		0)
+CONF(MaxChargingProfilesInstalled,		R,	int,		0)
+
+/* Security */
+CONF(AdditionalRootCertificateCheck,		R,	bool,		0)
+CONF(AuthorizationKey,				RW,	STR[40],	0)
+CONF(CertificateSignedMaxChainSize,		R,	int,		0)
+CONF(CertificateStoreMaxLength,			R,	int,		0)
+CONF(CpoName,					R,	STR[64],	0)
+CONF(SecurityProfile,				R,	int,		0)
+
+/* Custom */
+CONF(LibraryVersion,				R,	int,		OCPP_LIBRARY_VERSION)
+CONF(EVSuspendedTimeOut,			RW,	int,		900)
+CONF(Availability,				RW,	bool,		true)
+CONF(RFIDCardEnabled,				RW,	bool,		true)
+CONF(StopTransactionOnOfflineTimeOut,		RW,	int,		1800)
