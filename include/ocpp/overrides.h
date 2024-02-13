@@ -13,13 +13,18 @@ extern "C" {
 
 #include <stddef.h>
 
-int ocpp_send(const void *data, size_t datasize);
-int ocpp_recv(void *buf, size_t bufsize);
+struct ocpp_message;
+
+int ocpp_send(const struct ocpp_message *msg);
+int ocpp_recv(struct ocpp_message *msg);
+
+void ocpp_generate_message_id(void *buf, size_t bufsize);
 
 int ocpp_lock(void);
 int ocpp_unlock(void);
 
-int ocpp_free_data(void *data);
+int ocpp_configuration_lock(void);
+int ocpp_configuration_unlock(void);
 
 #if defined(__cplusplus)
 }

@@ -5,9 +5,11 @@
  */
 
 #include "ocpp/ocpp.h"
+#include "ocpp/list.h"
 
 #include <string.h>
 #include <errno.h>
+#include <time.h>
 
 #if !defined(OCPP_TX_POOL_LEN)
 #define OCPP_TX_POOL_LEN			8
@@ -22,9 +24,19 @@
 #define container_of(ptr, type, member)		\
 	((type *)(void *)((char *)(ptr) - offsetof(type, member)))
 
+struct message {
+	struct list link;
+	struct ocpp_message body;
+	time_t expiry;
+	uint32_t attempts; /**< The number of message sending attempts. */
+};
+
 static struct {
+	ocpp_event_callback_t event_callback;
+	void *event_callback_ctx;
+
 	struct {
-		struct ocpp_message pool[OCPP_TX_POOL_LEN];
+		struct message pool[OCPP_TX_POOL_LEN];
 		struct list ready;
 		struct list wait;
 
@@ -36,14 +48,39 @@ static struct {
 	} rx;
 } m;
 
-static struct ocpp_message *alloc_message(void)
+static void put_msg_ready(struct message *msg)
+{
+	list_add_tail(&msg->link, &m.tx.ready);
+}
+
+static void put_msg_wait(struct message *msg)
+{
+	list_add_tail(&msg->link, &m.tx.wait);
+}
+
+static void del_msg_ready(struct message *msg)
+{
+	list_del(&msg->link, &m.tx.ready);
+}
+
+static void del_msg_wait(struct message *msg)
+{
+	list_del(&msg->link, &m.tx.wait);
+}
+
+static int count_messages_waiting(void)
+{
+	return list_count(&m.tx.wait);
+}
+
+static struct message *alloc_message(void)
 {
 	for (int i = 0; i < OCPP_TX_POOL_LEN; i++) {
-		if (m.tx.pool[i].role != OCPP_MSG_ROLE_NONE) {
+		if (m.tx.pool[i].body.role != OCPP_MSG_ROLE_NONE) {
 			continue;
 		}
 
-		m.tx.pool[i].role = OCPP_MSG_ROLE_ALLOC;
+		m.tx.pool[i].body.role = OCPP_MSG_ROLE_ALLOC;
 
 		return &m.tx.pool[i];
 	}
@@ -51,25 +88,39 @@ static struct ocpp_message *alloc_message(void)
 	return NULL;
 }
 
-static void free_message(struct ocpp_message *msg)
+static void free_message(struct message *msg)
 {
-	if (msg->data != NULL) {
-		ocpp_free_data(msg->data);
-	}
-
 	memset(msg, 0, sizeof(*msg));
 }
 
-static struct ocpp_message *find_msg_by_idstr_json(struct list *list_head,
+static struct message *new_message(ocpp_message_role_t role,
+		ocpp_message_t type)
+{
+	struct message *msg = alloc_message();
+
+	if (msg == NULL) {
+		return NULL;
+	}
+
+	msg->body.role = role;
+	msg->body.type = type;
+	msg->attempts = 0;
+
+	if (role != OCPP_MSG_ROLE_CALLRESULT) {
+		ocpp_generate_message_id(msg->body.id, sizeof(msg->body.id));
+	}
+
+	return msg;
+}
+
+static struct message *find_msg_by_idstr(struct list *list_head,
 		const char *msgid)
 {
 	struct list *p;
 
 	list_for_each(p, list_head) {
-		struct ocpp_message *msg =
-			container_of(p, struct ocpp_message, link);
-		const char *json = (const char *)msg->data;
-		if (strncmp(msgid, &json[4], strlen(msgid)) == 0) {
+		struct message *msg = container_of(p, struct message, link);
+		if (memcmp(msgid, msg->body.id, strlen(msgid)) == 0) {
 			return msg;
 		}
 	}
@@ -77,47 +128,29 @@ static struct ocpp_message *find_msg_by_idstr_json(struct list *list_head,
 	return NULL;
 }
 
-static struct ocpp_message *find_msg_by_type(struct list *list_head,
-		ocpp_message_t type)
+static bool is_transaction_related(const struct message *msg)
 {
-	struct list *p;
-
-	list_for_each(p, list_head) {
-		struct ocpp_message *msg
-			= container_of(p, struct ocpp_message, link);
-		if (msg->type == type) {
-			return msg;
-		}
-	}
-
-	return NULL;
-}
-
-static bool is_transaction_related(const struct ocpp_message *msg)
-{
-	switch (msg->type) {
-	case OCPP_MSG_CORE_START_TRANSACTION: /* fall through */
-	case OCPP_MSG_CORE_STOP_TRANSACTION: /* fall through */
-	case OCPP_MSG_CORE_METER_VALUES: /* fall through */
+	switch (msg->body.type) {
+	case OCPP_MSG_START_TRANSACTION: /* fall through */
+	case OCPP_MSG_STOP_TRANSACTION: /* fall through */
+	case OCPP_MSG_METER_VALUES: /* fall through */
 		return true;
 	default:
 		return false;
 	}
 }
 
-static bool should_drop(struct ocpp_message *msg)
+static bool should_drop(struct message *msg)
 {
-	if (!is_transaction_related(msg) &&
-			msg->type != OCPP_MSG_CORE_BOOTNOTIFICATION) {
-		if (msg->attempts >= OCPP_DEFAULT_TX_RETRIES) {
-			return true;
-		}
-		return false;
-	}
+	uint32_t max_attempts = OCPP_DEFAULT_TX_RETRIES; /* non-transactional */
 
-	int max_attempts;
-	ocpp_get_configuration("TransactionMessageAttempts",
-			&max_attempts, sizeof(max_attempts), NULL);
+	/* never drop BootNotification */
+	if (msg->body.type == OCPP_MSG_BOOTNOTIFICATION) {
+		return false;
+	} else if (is_transaction_related(msg)) {
+		ocpp_get_configuration("TransactionMessageAttempts",
+				&max_attempts, sizeof(max_attempts), NULL);
+	}
 
 	if (msg->attempts >= max_attempts) {
 		return true;
@@ -126,15 +159,14 @@ static bool should_drop(struct ocpp_message *msg)
 	return false;
 }
 
-static bool should_send_heartbeat(void)
+static bool should_send_heartbeat(const time_t *now)
 {
-	time_t now = time(NULL);
 	uint32_t interval;
 
 	ocpp_get_configuration("HeartbeatInterval",
 			&interval, sizeof(interval), 0);
 
-	if ((uint32_t)(now - m.tx.timestamp) < interval ||
+	if ((uint32_t)(*now - m.tx.timestamp) < interval ||
 			list_count(&m.tx.ready) > 0 ||
 			list_count(&m.tx.wait) > 0) {
 		return false;
@@ -143,117 +175,175 @@ static bool should_send_heartbeat(void)
 	return true;
 }
 
-static time_t calc_message_timeout(const struct ocpp_message *msg)
+static time_t calc_message_timeout(const struct message *msg, const time_t *now)
 {
 	uint32_t interval = OCPP_DEFAULT_TX_TIMEOUT_SEC;
-	time_t now = time(NULL);
 
 	if (is_transaction_related(msg)) {
 		ocpp_get_configuration("TransactionMessageRetryInterval",
 				&interval, sizeof(interval), 0);
 		interval = interval * msg->attempts;
+	} else if (msg->body.type == OCPP_MSG_BOOTNOTIFICATION ||
+			msg->body.type == OCPP_MSG_HEARTBEAT) {
+		ocpp_get_configuration("HeartbeatInterval",
+				&interval, sizeof(interval), 0);
 	}
 
-	return now + interval;
+	return *now + interval;
 }
 
-static void send_message(struct ocpp_message *msg)
+static void send_message(struct message *msg, const time_t *now)
 {
 	msg->attempts++;
-	msg->expiry = calc_message_timeout(msg);
+	msg->expiry = calc_message_timeout(msg, now);
 
-	if (ocpp_send(msg->data, msg->datasize) == (int)msg->datasize) {
-		list_del(&msg->link, &m.tx.ready);
+	del_msg_ready(msg);
 
-		if (msg->role == OCPP_MSG_ROLE_CALL) {
-			list_add_tail(&msg->link, &m.tx.wait);
-		} else if (msg->role == OCPP_MSG_ROLE_CALLRESULT) {
+	if (ocpp_send(&msg->body) == 0) {
+		if (msg->body.role == OCPP_MSG_ROLE_CALL) {
+			put_msg_wait(msg);
+		} else if (msg->body.role == OCPP_MSG_ROLE_CALLRESULT ||
+				msg->body.role == OCPP_MSG_ROLE_CALLERROR) {
 			free_message(msg);
 		}
 
-		m.tx.timestamp = time(NULL);
+		m.tx.timestamp = *now;
 	} else {
-		list_del(&msg->link, &m.tx.ready);
-		list_add_tail(&msg->link, &m.tx.wait);
+		put_msg_wait(msg);
 	}
 }
 
-static void process_tx_timeout(void)
+static void process_tx_timeout(const time_t *now)
 {
 	struct list *p, *t;
-	time_t now = time(NULL);
 
 	list_for_each_safe(p, t, &m.tx.wait) {
-		struct ocpp_message *msg =
-			container_of(p, struct ocpp_message, link);
-		if (msg->expiry > now) {
+		struct message *msg = container_of(p, struct message, link);
+		if (msg->expiry > *now) {
 			continue;
 		}
 
-		list_del(p, &m.tx.wait);
+		del_msg_wait(msg);
 
 		if (should_drop(msg)) {
 			free_message(msg);
 		} else {
-			list_add_tail(p, &m.tx.ready);
+			put_msg_ready(msg);
 		}
 	}
 }
 
-static void process_queued_messages(void)
+static int process_queued_messages(const time_t *now)
 {
-	process_tx_timeout();
+	process_tx_timeout(now);
 
-	if (list_count(&m.tx.wait) > 0) {
-		return; /* wait for the response to the previous message */
+	if (count_messages_waiting() > 0) {
+		/* wait for the response to the previous message */
+		return -EBUSY;
 	}
 
 	struct list *p, *t;
 
 	list_for_each_safe(p, t, &m.tx.ready) {
-		struct ocpp_message *msg =
-			container_of(p, struct ocpp_message, link);
-		send_message(msg);
-		return; /* send one by one */
+		struct message *msg = container_of(p, struct message, link);
+		send_message(msg, now);
+		return 0; /* send one by one */
 	}
 
-	if (should_send_heartbeat()) {
-		//ocpp_heartbeat(cp);
+	return 0;
+}
+
+static int process_periodic_messages(const time_t *now)
+{
+	if (should_send_heartbeat(now)) {
+		struct message *msg =
+			new_message(OCPP_MSG_ROLE_CALL, OCPP_MSG_HEARTBEAT);
+		if (msg) {
+			put_msg_ready(msg);
+			process_queued_messages(now);
+		}
+	}
+
+	return 0;
+}
+
+static void (*on_central_request[OCPP_MSG_MAX])
+		(const struct ocpp_message *received) = {
+};
+
+static void (*on_central_response[OCPP_MSG_MAX])
+		(const struct ocpp_message *received, struct message *req) = {
+};
+
+static void process_central_request(const struct ocpp_message *received)
+{
+	if (on_central_request[received->type]) {
+		(*on_central_request[received->type])(received);
 	}
 }
 
-static void process_periodic_messages(void)
+static void process_central_response(const struct ocpp_message *received,
+		struct message *req)
 {
+	if (on_central_response[received->type]) {
+		(*on_central_response[received->type])(received, req);
+	}
+
+	if (received->role == OCPP_MSG_ROLE_CALLRESULT) {
+		del_msg_wait(req);
+		free_message(req);
+	}
 }
 
-static void process_incoming_messages(void)
+static int process_incoming_messages(const time_t *now)
 {
+	struct ocpp_message received = { 0, };
+	struct message *req = NULL;
+	int err = 0;
+
+	if (ocpp_recv(&received) != 0) {
+		return -EBADMSG;
+	}
+
+	switch (received.role) {
+	case OCPP_MSG_ROLE_CALL:
+		process_central_request(&received);
+		break;
+	case OCPP_MSG_ROLE_CALLRESULT: /* fall through */
+	case OCPP_MSG_ROLE_CALLERROR:
+		if ((req = find_msg_by_idstr(&m.tx.wait, received.id)) == NULL) {
+			err = -ENOLINK;
+			break;
+		}
+		process_central_response(&received, req);
+		break;
+	default:
+		break;
+	}
+
+	if (m.event_callback) {
+		(*m.event_callback)(err, &received, m.event_callback_ctx);
+	}
+
+	return err;
 }
 
 int ocpp_push_message(ocpp_message_role_t role, ocpp_message_t type,
 		const void *data, size_t datasize)
 {
-	if (data == NULL) {
-		return -EINVAL;
+	/* HeartBeat is sent internally on itself. */
+	if (role == OCPP_MSG_ROLE_CALL && type == OCPP_MSG_HEARTBEAT) {
+		return -EALREADY;
 	}
 
 	ocpp_lock();
 
-	struct ocpp_message *msg = alloc_message();
-	int err;
+	struct message *msg = new_message(role, type);
 
-	if (msg == NULL) {
-		ocpp_unlock();
-		return -ENOMEM;
+	if (msg) {
+		memcpy(&msg->body.fmt, data, datasize);
+		put_msg_ready(msg);
 	}
-
-	msg->data = data;
-	msg->datasize = datasize;
-	msg->role = role;
-	msg->type = type;
-	msg->attempts = 0;
-
-	list_add_tail(&msg->link, &m.tx.ready);
 
 	ocpp_unlock();
 
@@ -262,11 +352,13 @@ int ocpp_push_message(ocpp_message_role_t role, ocpp_message_t type,
 
 int ocpp_step(void)
 {
+	time_t now = time(NULL);
+
 	ocpp_lock();
 
-	process_queued_messages();
-	process_periodic_messages();
-	process_incoming_messages();
+	process_incoming_messages(&now);
+	process_queued_messages(&now);
+	process_periodic_messages(&now);
 
 	ocpp_unlock();
 
@@ -275,10 +367,15 @@ int ocpp_step(void)
 
 int ocpp_init(ocpp_event_callback_t cb, void *cb_ctx)
 {
-	for (int i = 0; i < OCPP_TX_QUEUE_LEN; i++) {
-		free_message(&m.tx.pool[i]);
-	}
+	memset(&m, 0, sizeof(m));
 
 	list_init(&m.tx.ready);
 	list_init(&m.tx.wait);
+
+	m.event_callback = cb;
+	m.event_callback_ctx = cb_ctx;
+
+	ocpp_reset_configuration();
+
+	return 0;
 }

@@ -21,3 +21,5 @@ See [the examples](examples) for more details.
 - [ ] OCPP 1.6 Server
 - [ ] OCPP 2.0.1 Client
 - [ ] OCPP 2.0.1 Server
+- [ ] OCPP 2.1 Client
+- [ ] OCPP 2.1 Server

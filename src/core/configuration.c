@@ -5,6 +5,7 @@
  */
 
 #include "ocpp/core/configuration.h"
+#include "ocpp/overrides.h"
 #include <string.h>
 #include <errno.h>
 
@@ -28,20 +29,20 @@ typedef enum {
 } configuration_value_t;
 
 typedef enum {
-#define CONF(key, accessbility, type, default_value)	key,
+#define OCPP_CONFIG(key, accessbility, type, default_value)	key,
 #include OCPP_CONFIGURATION_DEFINES
-#undef CONF
+#undef OCPP_CONFIG
 	CONFIGURATION_MAX,
 	UnknownConfiguration,
 } configuration_t;
 
 #define CSL int
 #define STR uint8_t
-#define CONF(key, accessbility, type, default_value)	+ sizeof(type)
+#define OCPP_CONFIG(key, accessbility, type, default_value)	+ sizeof(type)
 static uint8_t configurations_pool[0
 #include OCPP_CONFIGURATION_DEFINES
 ];
-#undef CONF
+#undef OCPP_CONFIG
 #undef STR
 #undef CSL
 
@@ -50,20 +51,21 @@ static struct ocpp_configuration {
 } configurations[CONFIGURATION_MAX];
 
 static const char * const confstr[] = {
-#define CONF(key, accessbility, type, default_value)	[key] = #key,
+#define OCPP_CONFIG(key, accessbility, type, default_value)	[key] = #key,
 #include OCPP_CONFIGURATION_DEFINES
-#undef CONF
+#undef OCPP_CONFIG
 };
 _Static_assert(sizeof(confstr) / sizeof(confstr[0]) == CONFIGURATION_MAX, "");
 
 static size_t get_value_cap(configuration_t key)
 {
-	uint8_t size[CONFIGURATION_MAX] = {
+	const uint8_t size[CONFIGURATION_MAX] = {
 #define CSL int
 #define STR uint8_t
-#define CONF(key, accessbility, type, default_value) [key] = sizeof(type),
+#define OCPP_CONFIG(key, accessbility, type, default_value)	\
+	[key] = sizeof(type),
 #include OCPP_CONFIGURATION_DEFINES
-#undef CONF
+#undef OCPP_CONFIG
 #undef STR
 #undef CSL
 	};
@@ -93,7 +95,7 @@ static void set_default_value(void)
 
 #define CSL int
 #define STR uint8_t
-#define CONF(key, accessbility, type, default_value)	\
+#define OCPP_CONFIG(key, accessbility, type, default_value)	\
 	if (strncmp(#type, cmpstr, strlen(cmpstr)) == 0) { \
 		const char *s = (const char *)default_value; \
 		if (s) { \
@@ -106,7 +108,7 @@ static void set_default_value(void)
 				&value.v_ ## type, sizeof(type)); \
 	}
 #include OCPP_CONFIGURATION_DEFINES
-#undef CONF
+#undef OCPP_CONFIG
 #undef STR
 #undef CSL
 }
@@ -116,9 +118,10 @@ static bool is_writable(configuration_t key)
 	switch (key) {
 #define R					false
 #define RW					true
-#define CONF(key, accessbility, type, value)	case key: return accessbility;
+#define OCPP_CONFIG(key, accessbility, type, value)	\
+	case key: return accessbility;
 #include OCPP_CONFIGURATION_DEFINES
-#undef CONF
+#undef OCPP_CONFIG
 #undef RW
 #undef R
 	case CONFIGURATION_MAX: /* fall through */
@@ -160,9 +163,12 @@ int ocpp_copy_configuration_from(const void *data, size_t datasize)
 		return -EINVAL;
 	}
 
-	memcpy(configurations_pool, data, datasize);
+	ocpp_configuration_lock();
 
+	memcpy(configurations_pool, data, datasize);
 	link_configuration_pool();
+
+	ocpp_configuration_unlock();
 
 	return 0;
 }
@@ -173,7 +179,9 @@ int ocpp_copy_configuration_to(void *buf, size_t bufsize)
 		return -EINVAL;
 	}
 
+	ocpp_configuration_lock();
 	memcpy(buf, configurations_pool, sizeof(configurations_pool));
+	ocpp_configuration_unlock();
 
 	return 0;
 }
@@ -191,7 +199,9 @@ int ocpp_set_configuration(const char * const keystr,
 		return -EPERM;
 	}
 
+	ocpp_configuration_lock();
 	memcpy(configurations[key].value, value, value_size);
+	ocpp_configuration_unlock();
 
 	return 0;
 }
@@ -209,8 +219,12 @@ int ocpp_get_configuration(const char * const keystr,
 		*readonly = !is_writable(key);
 	}
 
+	ocpp_configuration_lock();
+
 	memcpy(buf, configurations[key].value,
 			MIN(get_value_cap(key), bufsize));
+
+	ocpp_configuration_unlock();
 
 	return 0;
 }
@@ -226,8 +240,12 @@ int ocpp_get_configuration_by_index(int index,
 		*readonly = !is_writable((configuration_t)index);
 	}
 
+	ocpp_configuration_lock();
+
 	memcpy(buf, configurations[index].value,
 			MIN(get_value_cap((configuration_t)index), bufsize));
+
+	ocpp_configuration_unlock();
 
 	return 0;
 }
@@ -247,6 +265,10 @@ void ocpp_reset_configuration(void)
 {
 	memset(&configurations_pool, 0, sizeof(configurations_pool));
 
+	ocpp_configuration_lock();
+
 	link_configuration_pool();
 	set_default_value();
+
+	ocpp_configuration_unlock();
 }

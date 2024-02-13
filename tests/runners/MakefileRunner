@@ -60,7 +60,8 @@ CPPUTEST_WARNINGFLAGS += \
 	-Wno-error=format-nonliteral \
 	-Wno-error=pedantic \
 	-Wno-error=suggest-override \
-	-Wno-error=suggest-destructor-override
+	-Wno-error=suggest-destructor-override \
+	-Wno-error=address-of-temporary
 else
 #TARGET_PLATFORM ?= $(shell gcc -dumpmachine)
 endif

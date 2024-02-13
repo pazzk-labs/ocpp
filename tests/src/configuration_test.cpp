@@ -2,7 +2,15 @@
 #include "CppUTestExt/MockSupport.h"
 
 #include "ocpp/core/configuration.h"
+#include "ocpp/overrides.h"
 #include <errno.h>
+
+int ocpp_configuration_lock(void) {
+	return 0;
+}
+int ocpp_configuration_unlock(void) {
+	return 0;
+}
 
 TEST_GROUP(Configuration) {
 	void setup(void) {
@@ -56,6 +64,11 @@ TEST(Configuration, set_ShouldSetTheConfiguration) {
 	ocpp_set_configuration("MeterValuesSampledData", &expected, sizeof(expected));
 	ocpp_get_configuration("MeterValuesSampledData", &actual, sizeof(actual), NULL);
 	LONGS_EQUAL(0x180000, actual);
+
+	char buf[16];
+	ocpp_set_configuration("AuthorizationKey", "My Auth Key!", 12);
+	ocpp_get_configuration("AuthorizationKey", buf, sizeof(buf), NULL);
+	STRCMP_EQUAL("My Auth Key!", buf);
 }
 
 TEST(Configuration, is_writable_ShouldReturnItsAccessibility) {
