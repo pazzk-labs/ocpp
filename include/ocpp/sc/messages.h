@@ -28,7 +28,7 @@ struct ocpp_GetCompositeSchedule {
 };
 
 struct ocpp_GetCompositeSchedule_conf {
-	ocpp_status_t status;
+	ocpp_profile_status_t status;
 	int connectorId;
 	time_t scheduleStart;
 	struct ocpp_ChargingSchedule chargingSchedule;
@@ -40,7 +40,7 @@ struct ocpp_SetChargingProfile {
 };
 
 struct ocpp_SetChargingProfile_conf {
-	ocpp_status_t status;
+	ocpp_profile_status_t status;
 };
 
 #if defined(__cplusplus)

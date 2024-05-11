@@ -20,7 +20,7 @@ struct ocpp_TriggerMessage {
 };
 
 struct ocpp_TriggerMessage_conf {
-	ocpp_status_t status;
+	ocpp_trigger_status_t status;
 };
 
 #if defined(__cplusplus)

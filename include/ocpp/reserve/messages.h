@@ -19,7 +19,7 @@ struct ocpp_CancelReservation {
 };
 
 struct ocpp_CancelReservation_conf {
-	ocpp_status_t status;
+	ocpp_reservation_status_t status;
 };
 
 struct ocpp_ReserveNow {

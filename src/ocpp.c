@@ -267,32 +267,17 @@ static int process_periodic_messages(const time_t *now)
 	return 0;
 }
 
-static void (*on_central_request[OCPP_MSG_MAX])
-		(const struct ocpp_message *received) = {
-};
-
-static void (*on_central_response[OCPP_MSG_MAX])
-		(const struct ocpp_message *received, struct message *req) = {
-};
-
 static void process_central_request(const struct ocpp_message *received)
 {
-	if (on_central_request[received->type]) {
-		(*on_central_request[received->type])(received);
-	}
+	(void)received;
 }
 
 static void process_central_response(const struct ocpp_message *received,
 		struct message *req)
 {
-	if (on_central_response[received->type]) {
-		(*on_central_response[received->type])(received, req);
-	}
-
-	if (received->role == OCPP_MSG_ROLE_CALLRESULT) {
-		del_msg_wait(req);
-		free_message(req);
-	}
+	(void)received;
+	del_msg_wait(req);
+	free_message(req);
 }
 
 static int process_incoming_messages(const time_t *now)
@@ -301,8 +286,8 @@ static int process_incoming_messages(const time_t *now)
 	struct message *req = NULL;
 	int err = 0;
 
-	if (ocpp_recv(&received) != 0) {
-		return -EBADMSG;
+	if ((err = ocpp_recv(&received)) != 0) {
+		goto out;
 	}
 
 	switch (received.role) {
@@ -321,7 +306,8 @@ static int process_incoming_messages(const time_t *now)
 		break;
 	}
 
-	if (m.event_callback) {
+out:
+	if (m.event_callback && err != -ENOMSG) {
 		(*m.event_callback)(err, &received, m.event_callback_ctx);
 	}
 

@@ -5,21 +5,3 @@
 4. Then, `ocpp_init()`.
 
 See [the examples](examples) for more details.
-
-## Supported Protocol
-- [x] OCPP 1.6 Client
-  - [x] Core
-  - [ ] Firmware Management
-  - [ ] Local Auth List Management
-  - [ ] Reservation
-  - [ ] Smart Charging
-  - [ ] Remote Trigger
-  - [x] Security
-    - [x] Unsecured Transport with Basic Authentication
-    - [x] TLS with Basic Authentication
-    - [x] TLS with Client Side Certificates
-- [ ] OCPP 1.6 Server
-- [ ] OCPP 2.0.1 Client
-- [ ] OCPP 2.0.1 Server
-- [ ] OCPP 2.1 Client
-- [ ] OCPP 2.1 Server

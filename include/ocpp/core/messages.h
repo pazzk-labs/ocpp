@@ -36,7 +36,7 @@ struct ocpp_BootNotification {
 struct ocpp_BootNotification_conf {
 	time_t currentTime;
 	int interval;
-	ocpp_status_t status;
+	ocpp_boot_status_t status;
 };
 
 struct ocpp_ChangeAvailability {
@@ -53,7 +53,7 @@ struct ocpp_ChangeConfiguration {
 };
 
 struct ocpp_ChangeConfiguration_conf {
-	ocpp_status_t status;
+	ocpp_config_status_t status;
 };
 
 struct ocpp_ClearCache {
@@ -61,7 +61,7 @@ struct ocpp_ClearCache {
 };
 
 struct ocpp_ClearCache_conf {
-	ocpp_status_t status;
+	ocpp_remote_status_t status;
 };
 
 struct ocpp_DataTransfer {
@@ -71,7 +71,7 @@ struct ocpp_DataTransfer {
 };
 
 struct ocpp_DataTransfer_conf {
-	ocpp_status_t status;
+	ocpp_data_status_t status;
 	char data[0];
 };
 
@@ -109,7 +109,7 @@ struct ocpp_RemoteStartTransaction {
 };
 
 struct ocpp_RemoteStartTransaction_conf {
-	ocpp_status_t status;
+	ocpp_remote_status_t status;
 };
 
 struct ocpp_RemoteStopTransaction {
@@ -117,7 +117,7 @@ struct ocpp_RemoteStopTransaction {
 };
 
 struct ocpp_RemoteStopTransaction_conf {
-	ocpp_status_t status;
+	ocpp_remote_status_t status;
 };
 
 struct ocpp_Reset {
@@ -125,7 +125,7 @@ struct ocpp_Reset {
 };
 
 struct ocpp_Reset_conf {
-	ocpp_status_t status;
+	ocpp_remote_status_t status;
 };
 
 struct ocpp_StartTransaction {
