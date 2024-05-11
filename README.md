@@ -9,11 +9,11 @@ See [the examples](examples) for more details.
 ## Supported Protocol
 - [x] OCPP 1.6 Client
   - [x] Core
-  - [x] Firmware Management
+  - [ ] Firmware Management
   - [ ] Local Auth List Management
   - [ ] Reservation
   - [ ] Smart Charging
-  - [x] Remote Trigger
+  - [ ] Remote Trigger
   - [x] Security
     - [x] Unsecured Transport with Basic Authentication
     - [x] TLS with Basic Authentication
