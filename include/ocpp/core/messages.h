@@ -142,10 +142,10 @@ struct ocpp_StartTransaction_conf {
 };
 
 struct ocpp_StatusNotification {
-	int connectorId;
-	ocpp_error_t errorCode;
+	int connectorId;		/* required */
+	ocpp_error_t errorCode;		/* required */
 	char info[50+1];
-	ocpp_status_t status;
+	ocpp_status_t status;		/* required */
 	time_t timestamp;
 	char vendorId[255+1];
 	char vendorErrorCode[50+1];
