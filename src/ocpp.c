@@ -48,6 +48,11 @@ static struct {
 	} rx;
 } m;
 
+static void put_msg_ready_infront(struct message *msg)
+{
+	list_add(&msg->link, &m.tx.ready);
+}
+
 static void put_msg_ready(struct message *msg)
 {
 	list_add_tail(&msg->link, &m.tx.ready);
@@ -228,7 +233,7 @@ static void process_tx_timeout(const time_t *now)
 		if (should_drop(msg)) {
 			free_message(msg);
 		} else {
-			put_msg_ready(msg);
+			put_msg_ready_infront(msg);
 		}
 	}
 }

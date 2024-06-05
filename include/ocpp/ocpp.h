@@ -135,6 +135,7 @@ int ocpp_save_snapshot(void *buf, size_t bufsize);
  */
 int ocpp_restore_snapshot(const void *snapshot);
 size_t ocpp_compute_snapshot_size(void);
+const char *ocpp_stringify_type(ocpp_message_t msgtype);
 
 #if defined(__cplusplus)
 }
