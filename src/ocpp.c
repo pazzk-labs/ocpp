@@ -197,6 +197,14 @@ static time_t calc_message_timeout(const struct message *msg, const time_t *now)
 	return *now + interval;
 }
 
+static time_t calc_message_backoff_period(const struct message *msg,
+		const time_t *now)
+{
+	uint32_t interval = OCPP_DEFAULT_TX_TIMEOUT_SEC;
+
+	return *now + (interval * msg->attempts);
+}
+
 static void send_message(struct message *msg, const time_t *now)
 {
 	msg->attempts++;
@@ -214,6 +222,7 @@ static void send_message(struct message *msg, const time_t *now)
 
 		m.tx.timestamp = *now;
 	} else {
+		msg->expiry = calc_message_backoff_period(msg, now);
 		put_msg_wait(msg);
 	}
 }
