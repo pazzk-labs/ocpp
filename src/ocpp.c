@@ -328,9 +328,9 @@ out:
 	return err;
 }
 
-const char *ocpp_stringify_type(ocpp_message_t msgtype)
+static const char **get_typestr_array(void)
 {
-	const char *msgstr[] = {
+	static const char *msgstr[] = {
 		[OCPP_MSG_AUTHORIZE] = "Authorize",
 		[OCPP_MSG_BOOTNOTIFICATION] = "BootNotification",
 		[OCPP_MSG_CHANGE_AVAILABILITY] = "ChangeAvailability",
@@ -361,7 +361,35 @@ const char *ocpp_stringify_type(ocpp_message_t msgtype)
 		[OCPP_MSG_TRIGGER_MESSAGE] = "TriggerMessage",
 	};
 
+	return msgstr;
+}
+
+const char *ocpp_stringify_type(ocpp_message_t msgtype)
+{
+	const char **msgstr = get_typestr_array();
 	return msgtype >= OCPP_MSG_MAX? NULL : msgstr[msgtype];
+}
+
+ocpp_message_t ocpp_get_type_from_string(const char *typestr)
+{
+	const char **msgstr = get_typestr_array();
+
+	for (ocpp_message_t i = 0; i < OCPP_MSG_MAX; i++) {
+		if (strcmp(typestr, msgstr[i]) == 0) {
+			return i;
+		}
+	}
+
+	return OCPP_MSG_MAX;
+}
+
+ocpp_message_t ocpp_get_type_from_idstr(const char *idstr)
+{
+	ocpp_lock();
+	const struct message *req = find_msg_by_idstr(&m.tx.wait, idstr);
+	ocpp_unlock();
+
+	return req->body.type;
 }
 
 int ocpp_push_message(ocpp_message_role_t role, ocpp_message_t type,
