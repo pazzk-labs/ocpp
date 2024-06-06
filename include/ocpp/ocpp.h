@@ -139,6 +139,16 @@ size_t ocpp_compute_snapshot_size(void);
 const char *ocpp_stringify_type(ocpp_message_t msgtype);
 
 ocpp_message_t ocpp_get_type_from_string(const char *typestr);
+/**
+ * @brief Get message type from ID string
+ *
+ * @param[in] idstr ID string
+ *
+ * @warn It must only be called from `ocpp_recv()` which is in the context of
+ * OCPP protection.
+ *
+ * @return Type of message. `OCPP_MSG_MAX` if no matching found.
+ */
 ocpp_message_t ocpp_get_type_from_idstr(const char *idstr);
 
 #if defined(__cplusplus)

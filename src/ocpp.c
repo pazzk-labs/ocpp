@@ -385,9 +385,11 @@ ocpp_message_t ocpp_get_type_from_string(const char *typestr)
 
 ocpp_message_t ocpp_get_type_from_idstr(const char *idstr)
 {
-	ocpp_lock();
 	const struct message *req = find_msg_by_idstr(&m.tx.wait, idstr);
-	ocpp_unlock();
+
+	if (req == NULL) {
+		return OCPP_MSG_MAX;
+	}
 
 	return req->body.type;
 }
