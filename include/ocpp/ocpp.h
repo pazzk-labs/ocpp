@@ -103,8 +103,8 @@ struct ocpp_message {
 	ocpp_message_t type;
 
 	union {
-		const union ocpp_message_req req;
-		const union ocpp_message_conf conf;
+		union ocpp_message_req req;
+		union ocpp_message_conf conf;
 	} fmt;
 };
 
