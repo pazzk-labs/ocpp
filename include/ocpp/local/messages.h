@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef OCPP_LOCAL_AUTH_MESSAGES_H
-#define OCPP_LOCAL_AUTH_MESSAGES_H
+#ifndef LIBMCU_OCPP_LOCAL_AUTH_MESSAGES_H
+#define LIBMCU_OCPP_LOCAL_AUTH_MESSAGES_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -35,4 +35,4 @@ struct ocpp_SendLocalList_conf {
 }
 #endif
 
-#endif /* OCPP_LOCAL_AUTH_MESSAGES_H */
+#endif /* LIBMCU_OCPP_LOCAL_AUTH_MESSAGES_H */

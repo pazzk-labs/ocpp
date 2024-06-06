@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef OCPP_CONFIGURATION_H
-#define OCPP_CONFIGURATION_H
+#ifndef LIBMCU_OCPP_CONFIGURATION_H
+#define LIBMCU_OCPP_CONFIGURATION_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -55,4 +55,4 @@ bool ocpp_is_configuration_writable(const char * const keystr);
 }
 #endif
 
-#endif /* OCPP_CONFIGURATION_H */
+#endif /* LIBMCU_OCPP_CONFIGURATION_H */

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef OCPP_H
-#define OCPP_H
+#ifndef LIBMCU_OCPP_H
+#define LIBMCU_OCPP_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -145,4 +145,4 @@ ocpp_message_t ocpp_get_type_from_idstr(const char *idstr);
 }
 #endif
 
-#endif /* OCPP_H */
+#endif /* LIBMCU_OCPP_H */

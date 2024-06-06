@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef OCPP_OVERRIDES_H
-#define OCPP_OVERRIDES_H
+#ifndef LIBMCU_OCPP_OVERRIDES_H
+#define LIBMCU_OCPP_OVERRIDES_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -30,4 +30,4 @@ int ocpp_configuration_unlock(void);
 }
 #endif
 
-#endif /* OCPP_OVERRIDES_H */
+#endif /* LIBMCU_OCPP_OVERRIDES_H */

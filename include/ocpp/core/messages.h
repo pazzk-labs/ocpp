@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef OCPP_CORE_MESSAGES_H
-#define OCPP_CORE_MESSAGES_H
+#ifndef LIBMCU_OCPP_CORE_MESSAGES_H
+#define LIBMCU_OCPP_CORE_MESSAGES_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -183,4 +183,4 @@ int ocpp_send_datatransfer(const struct ocpp_DataTransfer *msg);
 }
 #endif
 
-#endif /* OCPP_CORE_MESSAGES_H */
+#endif /* LIBMCU_OCPP_CORE_MESSAGES_H */

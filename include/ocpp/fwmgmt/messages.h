@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef OCPP_FWMGMT_MESSAGES_H
-#define OCPP_FWMGMT_MESSAGES_H
+#ifndef LIBMCU_OCPP_FWMGMT_MESSAGES_H
+#define LIBMCU_OCPP_FWMGMT_MESSAGES_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -57,4 +57,4 @@ struct ocpp_UpdateFirmware_conf {
 }
 #endif
 
-#endif /* OCPP_FWMGMT_MESSAGES_H */
+#endif /* LIBMCU_OCPP_FWMGMT_MESSAGES_H */
