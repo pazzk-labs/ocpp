@@ -298,9 +298,12 @@ static int process_incoming_messages(const time_t *now)
 {
 	struct ocpp_message received = { 0, };
 	struct message *req = NULL;
-	int err = 0;
 
-	if ((err = ocpp_recv(&received)) != 0) {
+	ocpp_unlock();
+	int err = ocpp_recv(&received);
+	ocpp_lock();
+
+	if (err != 0) {
 		goto out;
 	}
 
@@ -322,7 +325,9 @@ static int process_incoming_messages(const time_t *now)
 
 out:
 	if (m.event_callback && err != -ENOMSG) {
+		ocpp_unlock();
 		(*m.event_callback)(err, &received, m.event_callback_ctx);
+		ocpp_lock();
 	}
 
 	return err;
@@ -385,7 +390,9 @@ ocpp_message_t ocpp_get_type_from_string(const char *typestr)
 
 ocpp_message_t ocpp_get_type_from_idstr(const char *idstr)
 {
+	ocpp_lock();
 	const struct message *req = find_msg_by_idstr(&m.tx.wait, idstr);
+	ocpp_unlock();
 
 	if (req == NULL) {
 		return OCPP_MSG_MAX;
