@@ -31,6 +31,8 @@ struct message {
 	uint32_t attempts; /**< The number of message sending attempts. */
 };
 
+typedef void (*list_add_func_t)(struct message *);
+
 static struct {
 	ocpp_event_callback_t event_callback;
 	void *event_callback_ctx;
@@ -39,6 +41,7 @@ static struct {
 		struct message pool[OCPP_TX_POOL_LEN];
 		struct list ready;
 		struct list wait;
+		struct list timer;
 
 		time_t timestamp;
 	} tx;
@@ -63,6 +66,11 @@ static void put_msg_wait(struct message *msg)
 	list_add_tail(&msg->link, &m.tx.wait);
 }
 
+static void put_msg_timer(struct message *msg)
+{
+	list_add_tail(&msg->link, &m.tx.timer);
+}
+
 static void del_msg_ready(struct message *msg)
 {
 	list_del(&msg->link, &m.tx.ready);
@@ -73,9 +81,19 @@ static void del_msg_wait(struct message *msg)
 	list_del(&msg->link, &m.tx.wait);
 }
 
+static void del_msg_timer(struct message *msg)
+{
+	list_del(&msg->link, &m.tx.timer);
+}
+
 static int count_messages_waiting(void)
 {
 	return list_count(&m.tx.wait);
+}
+
+static int count_messages_ticking(void)
+{
+	return list_count(&m.tx.timer);
 }
 
 static struct message *alloc_message(void)
@@ -229,7 +247,8 @@ static void send_message(struct message *msg, const time_t *now)
 
 static void process_tx_timeout(const time_t *now)
 {
-	struct list *p, *t;
+	struct list *p;
+	struct list *t;
 
 	list_for_each_safe(p, t, &m.tx.wait) {
 		struct message *msg = container_of(p, struct message, link);
@@ -256,7 +275,8 @@ static int process_queued_messages(const time_t *now)
 		return -EBUSY;
 	}
 
-	struct list *p, *t;
+	struct list *p;
+	struct list *t;
 
 	list_for_each_safe(p, t, &m.tx.ready) {
 		struct message *msg = container_of(p, struct message, link);
@@ -281,6 +301,28 @@ static int process_periodic_messages(const time_t *now)
 	return 0;
 }
 
+static int process_timer_messages(const time_t *now)
+{
+	if (count_messages_ticking() <= 0) {
+		return 0;
+	}
+
+	struct list *p;
+	struct list *t;
+
+	list_for_each_safe(p, t, &m.tx.timer) {
+		struct message *msg = container_of(p, struct message, link);
+		if (msg->expiry > *now) {
+			continue;
+		}
+
+		del_msg_timer(msg);
+		put_msg_ready(msg);
+	}
+
+	return 0;
+}
+
 static void process_central_request(const struct ocpp_message *received)
 {
 	(void)received;
@@ -294,7 +336,7 @@ static void process_central_response(const struct ocpp_message *received,
 	free_message(req);
 }
 
-static int process_incoming_messages(const time_t *now)
+static int process_incoming_messages(void)
 {
 	struct ocpp_message received = { 0, };
 	struct message *req = NULL;
@@ -331,6 +373,26 @@ out:
 	}
 
 	return err;
+}
+
+static int push_message(ocpp_message_role_t role, ocpp_message_t type,
+		const void *data, size_t datasize,
+		time_t timer, list_add_func_t f)
+{
+	/* HeartBeat is sent internally on itself. */
+	if (role == OCPP_MSG_ROLE_CALL && type == OCPP_MSG_HEARTBEAT) {
+		return -EALREADY;
+	}
+
+	struct message *msg = new_message(role, type);
+
+	if (msg) {
+		memcpy(&msg->body.fmt, data, datasize);
+		msg->expiry = timer;
+		(*f)(msg);
+	}
+
+	return 0;
 }
 
 static const char **get_typestr_array(void)
@@ -404,34 +466,41 @@ ocpp_message_t ocpp_get_type_from_idstr(const char *idstr)
 int ocpp_push_message(ocpp_message_role_t role, ocpp_message_t type,
 		const void *data, size_t datasize)
 {
-	/* HeartBeat is sent internally on itself. */
-	if (role == OCPP_MSG_ROLE_CALL && type == OCPP_MSG_HEARTBEAT) {
-		return -EALREADY;
+	ocpp_lock();
+	int rc = push_message(role, type, data, datasize, 0, put_msg_ready);
+	ocpp_unlock();
+
+	return rc;
+}
+
+int ocpp_push_message_defer(ocpp_message_role_t role, ocpp_message_t type,
+		const void *data, size_t datasize, uint32_t timer_sec)
+{
+	list_add_func_t f = put_msg_timer;
+
+	if (timer_sec == 0) {
+		f = put_msg_ready;
 	}
 
 	ocpp_lock();
-
-	struct message *msg = new_message(role, type);
-
-	if (msg) {
-		memcpy(&msg->body.fmt, data, datasize);
-		put_msg_ready(msg);
-	}
-
+	int rc = push_message(role, type, data, datasize,
+			time(NULL) + (time_t)timer_sec, f);
 	ocpp_unlock();
 
-	return 0;
+	return rc;
 }
 
 int ocpp_step(void)
 {
-	time_t now = time(NULL);
-
 	ocpp_lock();
 
-	process_incoming_messages(&now);
+	process_incoming_messages();
+
+	time_t now = time(NULL);
+
 	process_queued_messages(&now);
 	process_periodic_messages(&now);
+	process_timer_messages(&now);
 
 	ocpp_unlock();
 
@@ -444,6 +513,7 @@ int ocpp_init(ocpp_event_callback_t cb, void *cb_ctx)
 
 	list_init(&m.tx.ready);
 	list_init(&m.tx.wait);
+	list_init(&m.tx.timer);
 
 	m.event_callback = cb;
 	m.event_callback_ctx = cb_ctx;

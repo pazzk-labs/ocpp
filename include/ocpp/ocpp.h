@@ -112,6 +112,8 @@ int ocpp_init(ocpp_event_callback_t cb, void *cb_ctx);
 int ocpp_step(void);
 int ocpp_push_message(ocpp_message_role_t role, ocpp_message_t type,
 		const void *data, size_t datasize);
+int ocpp_push_message_defer(ocpp_message_role_t role, ocpp_message_t type,
+		const void *data, size_t datasize, uint32_t timer_sec);
 /**
  * @brief Save the current OCPP context as a snapshot.
  *
