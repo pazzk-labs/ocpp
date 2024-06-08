@@ -110,10 +110,11 @@ struct ocpp_message {
 
 int ocpp_init(ocpp_event_callback_t cb, void *cb_ctx);
 int ocpp_step(void);
-int ocpp_push_message(ocpp_message_role_t role, ocpp_message_t type,
-		const void *data, size_t datasize);
-int ocpp_push_message_defer(ocpp_message_role_t role, ocpp_message_t type,
+int ocpp_push_request(ocpp_message_t type, const void *data, size_t datasize);
+int ocpp_push_request_defer(ocpp_message_t type,
 		const void *data, size_t datasize, uint32_t timer_sec);
+int ocpp_push_response(const struct ocpp_message *req,
+		const void *data, size_t datasize, bool err);
 /**
  * @brief Save the current OCPP context as a snapshot.
  *

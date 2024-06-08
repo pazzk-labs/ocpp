@@ -116,8 +116,8 @@ static void free_message(struct message *msg)
 	memset(msg, 0, sizeof(*msg));
 }
 
-static struct message *new_message(ocpp_message_role_t role,
-		ocpp_message_t type)
+static struct message *new_message(const char *id,
+		ocpp_message_t type, bool err)
 {
 	struct message *msg = alloc_message();
 
@@ -125,11 +125,15 @@ static struct message *new_message(ocpp_message_role_t role,
 		return NULL;
 	}
 
-	msg->body.role = role;
 	msg->body.type = type;
 	msg->attempts = 0;
 
-	if (role != OCPP_MSG_ROLE_CALLRESULT) {
+	if (id) {
+		msg->body.role = err?
+			OCPP_MSG_ROLE_CALLERROR : OCPP_MSG_ROLE_CALLRESULT;
+		memcpy(msg->body.id, id, sizeof(msg->body.id));
+	} else {
+		msg->body.role = OCPP_MSG_ROLE_CALL;
 		ocpp_generate_message_id(msg->body.id, sizeof(msg->body.id));
 	}
 
@@ -290,8 +294,7 @@ static int process_queued_messages(const time_t *now)
 static int process_periodic_messages(const time_t *now)
 {
 	if (should_send_heartbeat(now)) {
-		struct message *msg =
-			new_message(OCPP_MSG_ROLE_CALL, OCPP_MSG_HEARTBEAT);
+		struct message *msg = new_message(NULL, OCPP_MSG_HEARTBEAT, 0);
 		if (msg) {
 			put_msg_ready(msg);
 			process_queued_messages(now);
@@ -375,16 +378,16 @@ out:
 	return err;
 }
 
-static int push_message(ocpp_message_role_t role, ocpp_message_t type,
+static int push_message(const char *id, ocpp_message_t type,
 		const void *data, size_t datasize,
-		time_t timer, list_add_func_t f)
+		time_t timer, list_add_func_t f, bool err)
 {
 	/* HeartBeat is sent internally on itself. */
-	if (role == OCPP_MSG_ROLE_CALL && type == OCPP_MSG_HEARTBEAT) {
+	if (type == OCPP_MSG_HEARTBEAT) {
 		return -EALREADY;
 	}
 
-	struct message *msg = new_message(role, type);
+	struct message *msg = new_message(id, type, err);
 
 	if (msg) {
 		memcpy(&msg->body.fmt, data, datasize);
@@ -463,17 +466,16 @@ ocpp_message_t ocpp_get_type_from_idstr(const char *idstr)
 	return req->body.type;
 }
 
-int ocpp_push_message(ocpp_message_role_t role, ocpp_message_t type,
-		const void *data, size_t datasize)
+int ocpp_push_request(ocpp_message_t type, const void *data, size_t datasize)
 {
 	ocpp_lock();
-	int rc = push_message(role, type, data, datasize, 0, put_msg_ready);
+	int rc = push_message(NULL, type, data, datasize, 0, put_msg_ready, 0);
 	ocpp_unlock();
 
 	return rc;
 }
 
-int ocpp_push_message_defer(ocpp_message_role_t role, ocpp_message_t type,
+int ocpp_push_request_defer(ocpp_message_t type,
 		const void *data, size_t datasize, uint32_t timer_sec)
 {
 	list_add_func_t f = put_msg_timer;
@@ -483,8 +485,19 @@ int ocpp_push_message_defer(ocpp_message_role_t role, ocpp_message_t type,
 	}
 
 	ocpp_lock();
-	int rc = push_message(role, type, data, datasize,
-			time(NULL) + (time_t)timer_sec, f);
+	int rc = push_message(NULL, type, data, datasize,
+			time(NULL) + (time_t)timer_sec, f, 0);
+	ocpp_unlock();
+
+	return rc;
+}
+
+int ocpp_push_response(const struct ocpp_message *req,
+		const void *data, size_t datasize, bool err)
+{
+	ocpp_lock();
+	int rc = push_message(req->id, req->type, data, datasize,
+			0, put_msg_ready, err);
 	ocpp_unlock();
 
 	return rc;
