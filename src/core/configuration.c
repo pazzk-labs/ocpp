@@ -128,11 +128,11 @@ static void set_default_value(void)
 		break; \
 	case OCPP_CONF_TYPE_INT: /* fall through */ \
 	case OCPP_CONF_TYPE_CSL: /* fall through */ \
-		v.v_INT = default_value; \
+		v.v_INT = (int)(uintptr_t)default_value; \
 		memcpy(configurations[key].value, &v.v_INT, type); \
 		break; \
 	case OCPP_CONF_TYPE_BOOL: /* fall through */\
-		v.v_BOOL = default_value; \
+		v.v_BOOL = (bool)(uintptr_t)default_value; \
 		memcpy(configurations[key].value, &v.v_BOOL, type); \
 		break; \
 	default: /*fall through */ \
