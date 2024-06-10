@@ -307,6 +307,15 @@ int ocpp_get_configuration_by_index(int index,
 	return 0;
 }
 
+const char *ocpp_get_configuration_keystr_from_index(int index)
+{
+	if (index < 0 || index >= CONFIGURATION_MAX) {
+		return NULL;
+	}
+
+	return confstr[index];
+}
+
 bool ocpp_is_configuration_writable(const char * const keystr)
 {
 	configuration_t key = get_key_from_keystr(keystr);

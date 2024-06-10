@@ -61,6 +61,7 @@ bool ocpp_is_configuration_writable(const char * const keystr);
 size_t ocpp_get_configuration_size(const char * const keystr);
 ocpp_configuration_data_t ocpp_get_configuration_data_type(
 		const char * const keystr);
+const char *ocpp_get_configuration_keystr_from_index(int index);
 
 #if defined(__cplusplus)
 }

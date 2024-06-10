@@ -116,3 +116,11 @@ TEST(Configuration, type_and_size_ShouldReturnConfigurationTypeAndSize_WhenUnkno
 	LONGS_EQUAL(OCPP_CONF_TYPE_UNKNOWN, ocpp_get_configuration_data_type("UnknownKey"));
 	LONGS_EQUAL(0, ocpp_get_configuration_size("UnknownKey"));
 }
+
+TEST(Configuration, get_keystr_ShouldReturnKeyString_WhenKnownKeyGiven) {
+	STRCMP_EQUAL("HeartbeatInterval", ocpp_get_configuration_keystr_from_index(9));
+}
+
+TEST(Configuration, get_keystr_ShouldReturnUnknownKeyString_WhenUnknownKeyGiven) {
+	STRCMP_EQUAL(NULL, ocpp_get_configuration_keystr_from_index(-1));
+}
