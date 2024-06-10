@@ -408,7 +408,7 @@ static const char **get_typestr_array(void)
 		[OCPP_MSG_CLEAR_CACHE] = "ClearCache",
 		[OCPP_MSG_DATA_TRANSFER] = "DataTransfer",
 		[OCPP_MSG_GET_CONFIGURATION] = "GetConfiguration",
-		[OCPP_MSG_HEARTBEAT] = "HeartBeat",
+		[OCPP_MSG_HEARTBEAT] = "Heartbeat",
 		[OCPP_MSG_METER_VALUES] = "MeterValues",
 		[OCPP_MSG_REMOTE_START_TRANSACTION] = "RemoteStartTransaction",
 		[OCPP_MSG_REMOTE_STOP_TRANSACTION] = "RemoteStopTransaction",
