@@ -17,6 +17,14 @@ extern "C" {
 
 #include "ocpp/type.h"
 
+typedef enum {
+	OCPP_CONF_TYPE_UNKNOWN,
+	OCPP_CONF_TYPE_INT,
+	OCPP_CONF_TYPE_CSL,
+	OCPP_CONF_TYPE_STR,
+	OCPP_CONF_TYPE_BOOL,
+} ocpp_configuration_data_t;
+
 bool ocpp_has_configuration(const char * const keystr);
 /**
  * @brief Count the number of configurations.
@@ -50,6 +58,9 @@ int ocpp_get_configuration(const char * const keystr,
 int ocpp_get_configuration_by_index(int index,
 		void *buf, size_t bufsize, bool *readonly);
 bool ocpp_is_configuration_writable(const char * const keystr);
+size_t ocpp_get_configuration_size(const char * const keystr);
+ocpp_configuration_data_t ocpp_get_configuration_data_type(
+		const char * const keystr);
 
 #if defined(__cplusplus)
 }

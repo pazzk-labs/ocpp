@@ -91,3 +91,28 @@ TEST(Configuration, set_ShouldReturnEPERM_WhenTryWriteOnReadOnly) {
 	int tmp;
 	LONGS_EQUAL(-EPERM, ocpp_set_configuration("NumberOfConnectors", &tmp, sizeof(tmp)));
 }
+
+TEST(Configuration, type_and_size_ShouldReturnConfigurationTypeAndSize_WhenBOOLTypeGiven) {
+	LONGS_EQUAL(OCPP_CONF_TYPE_BOOL, ocpp_get_configuration_data_type("AllowOfflineTxForUnknownId"));
+	LONGS_EQUAL(sizeof(bool), ocpp_get_configuration_size("AllowOfflineTxForUnknownId"));
+}
+
+TEST(Configuration, type_and_size_ShouldReturnConfigurationTypeAndSize_WhenINTTypeGiven) {
+	LONGS_EQUAL(OCPP_CONF_TYPE_INT, ocpp_get_configuration_data_type("ConnectionTimeOut"));
+	LONGS_EQUAL(sizeof(int), ocpp_get_configuration_size("ConnectionTimeOut"));
+}
+
+TEST(Configuration, type_and_size_ShouldReturnConfigurationTypeAndSize_WhenSTRTypeGiven) {
+	LONGS_EQUAL(OCPP_CONF_TYPE_STR, ocpp_get_configuration_data_type("AuthorizationKey"));
+	LONGS_EQUAL(40, ocpp_get_configuration_size("AuthorizationKey"));
+}
+
+TEST(Configuration, type_and_size_ShouldReturnConfigurationTypeAndSize_WhenCSLTypeGiven) {
+	LONGS_EQUAL(OCPP_CONF_TYPE_CSL, ocpp_get_configuration_data_type("ConnectorPhaseRotation"));
+	LONGS_EQUAL(sizeof(int), ocpp_get_configuration_size("ConnectorPhaseRotation"));
+}
+
+TEST(Configuration, type_and_size_ShouldReturnConfigurationTypeAndSize_WhenUnknownTypeGiven) {
+	LONGS_EQUAL(OCPP_CONF_TYPE_UNKNOWN, ocpp_get_configuration_data_type("UnknownKey"));
+	LONGS_EQUAL(0, ocpp_get_configuration_size("UnknownKey"));
+}

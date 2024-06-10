@@ -21,12 +21,11 @@
 #define MIN(a, b)			(((a) > (b))? (b) : (a))
 #endif
 
-typedef enum {
-	CT_INTEGER,
-	CT_BOOL,
-	CT_CSL,
-	CT_STRING,
-} configuration_value_t;
+#define CONF_SIZE(x)			(x)
+#define BOOL				CONF_SIZE(sizeof(bool))
+#define INT				CONF_SIZE(sizeof(int))
+#define CSL				CONF_SIZE(sizeof(int))
+#define STR				CONF_SIZE
 
 typedef enum {
 #define OCPP_CONFIG(key, accessbility, type, default_value)	key,
@@ -36,15 +35,11 @@ typedef enum {
 	UnknownConfiguration,
 } configuration_t;
 
-#define CSL int
-#define STR uint8_t
-#define OCPP_CONFIG(key, accessbility, type, default_value)	+ sizeof(type)
+#define OCPP_CONFIG(key, accessbility, type, default_value)	+ type
 static uint8_t configurations_pool[0
 #include OCPP_CONFIGURATION_DEFINES
 ];
 #undef OCPP_CONFIG
-#undef STR
-#undef CSL
 
 static struct ocpp_configuration {
 	uint8_t *value;
@@ -57,17 +52,45 @@ static const char * const confstr[] = {
 };
 _Static_assert(sizeof(confstr) / sizeof(confstr[0]) == CONFIGURATION_MAX, "");
 
-static size_t get_value_cap(configuration_t key)
+static ocpp_configuration_data_t get_value_type(configuration_t key)
 {
-	const uint8_t size[CONFIGURATION_MAX] = {
-#define CSL int
-#define STR uint8_t
+	const ocpp_configuration_data_t value_types[CONFIGURATION_MAX] = {
+#define STR_TYPE(x) OCPP_CONF_TYPE_STR
+#undef STR
+#undef CSL
+#undef INT
+#undef BOOL
+#define BOOL CONF_SIZE(OCPP_CONF_TYPE_BOOL)
+#define INT CONF_SIZE(OCPP_CONF_TYPE_INT)
+#define CSL CONF_SIZE(OCPP_CONF_TYPE_CSL)
+#define STR STR_TYPE
 #define OCPP_CONFIG(key, accessbility, type, default_value)	\
-	[key] = sizeof(type),
+	[key] = type,
 #include OCPP_CONFIGURATION_DEFINES
 #undef OCPP_CONFIG
 #undef STR
 #undef CSL
+#undef INT
+#undef BOOL
+	};
+	return value_types[key];
+}
+
+static size_t get_value_cap(configuration_t key)
+{
+	const uint8_t size[CONFIGURATION_MAX] = {
+#define BOOL CONF_SIZE(sizeof(bool))
+#define INT CONF_SIZE(sizeof(int))
+#define CSL CONF_SIZE(sizeof(int))
+#define STR CONF_SIZE
+#define OCPP_CONFIG(key, accessbility, type, default_value)	\
+	[key] = type,
+#include OCPP_CONFIGURATION_DEFINES
+#undef OCPP_CONFIG
+#undef STR
+#undef CSL
+#undef INT
+#undef BOOL
 	};
 	return (size_t)size[key];
 }
@@ -85,32 +108,43 @@ static void link_configuration_pool(void)
 static void set_default_value(void)
 {
 	union {
-		bool v_bool;
-		int v_int;
+		bool v_BOOL;
+		int v_INT;
 		int v_CSL;
-		char *v_STR;
-	} value;
+		const char *v_STR;
+	} v;
 
-	const char *cmpstr = "STR";
-
-#define CSL int
-#define STR uint8_t
+#define BOOL CONF_SIZE(sizeof(bool))
+#define INT CONF_SIZE(sizeof(int))
+#define CSL CONF_SIZE(sizeof(int))
+#define STR CONF_SIZE
 #define OCPP_CONFIG(key, accessbility, type, default_value)	\
-	if (strncmp(#type, cmpstr, strlen(cmpstr)) == 0) { \
-		const char *s = (const char *)default_value; \
-		if (s) { \
-			strncpy((char *)configurations[key].value, \
-					s, sizeof(type)); \
+	switch (get_value_type(key)) { \
+	case OCPP_CONF_TYPE_STR: \
+		v.v_STR = (const char *)default_value; \
+		if (v.v_STR) { \
+			strncpy((char *)configurations[key].value, v.v_STR, type); \
 		} \
-	} else { \
-		value.v_ ## type = default_value; \
-		memcpy(configurations[key].value, \
-				&value.v_ ## type, sizeof(type)); \
+		break; \
+	case OCPP_CONF_TYPE_INT: /* fall through */ \
+	case OCPP_CONF_TYPE_CSL: /* fall through */ \
+		v.v_INT = default_value; \
+		memcpy(configurations[key].value, &v.v_INT, type); \
+		break; \
+	case OCPP_CONF_TYPE_BOOL: /* fall through */\
+		v.v_BOOL = default_value; \
+		memcpy(configurations[key].value, &v.v_BOOL, type); \
+		break; \
+	default: /*fall through */ \
+	case OCPP_CONF_TYPE_UNKNOWN: \
+		break; \
 	}
 #include OCPP_CONFIGURATION_DEFINES
 #undef OCPP_CONFIG
 #undef STR
 #undef CSL
+#undef INT
+#undef BOOL
 }
 
 static bool is_writable(configuration_t key)
@@ -204,6 +238,29 @@ int ocpp_set_configuration(const char * const keystr,
 	ocpp_configuration_unlock();
 
 	return 0;
+}
+
+size_t ocpp_get_configuration_size(const char * const keystr)
+{
+	configuration_t key = get_key_from_keystr(keystr);
+
+	if (key == UnknownConfiguration) {
+		return 0;
+	}
+
+	return get_value_cap(key);
+}
+
+ocpp_configuration_data_t ocpp_get_configuration_data_type(
+		const char * const keystr)
+{
+	configuration_t key = get_key_from_keystr(keystr);
+
+	if (key == UnknownConfiguration) {
+		return OCPP_CONF_TYPE_UNKNOWN;
+	}
+
+	return get_value_type(key);
 }
 
 int ocpp_get_configuration(const char * const keystr,
