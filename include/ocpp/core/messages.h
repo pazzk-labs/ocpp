@@ -41,10 +41,11 @@ struct ocpp_BootNotification_conf {
 
 struct ocpp_ChangeAvailability {
 	int connectorId;
+	ocpp_availability_t type;
 };
 
 struct ocpp_ChangeAvailability_conf {
-	ocpp_availability_t type;
+	ocpp_availability_status_t status;
 };
 
 struct ocpp_ChangeConfiguration {
