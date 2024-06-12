@@ -193,7 +193,7 @@ static bool should_send_heartbeat(const time_t *now)
 	ocpp_get_configuration("HeartbeatInterval",
 			&interval, sizeof(interval), 0);
 
-	if ((uint32_t)(*now - m.tx.timestamp) < interval ||
+	if (interval == 0 || (uint32_t)(*now - m.tx.timestamp) < interval ||
 			list_count(&m.tx.ready) > 0 ||
 			list_count(&m.tx.wait) > 0) {
 		return false;
