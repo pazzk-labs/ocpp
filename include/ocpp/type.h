@@ -11,6 +11,7 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
 #include <time.h>
 
 #define OCPP_MESSAGE_ID_MAXLEN		(36 + 1/*null*/)
@@ -236,6 +237,7 @@ typedef enum {
 } ocpp_comm_status_t;
 
 typedef enum {
+	OCPP_AUTH_STATUS_UNKNOWN,
 	OCPP_AUTH_STATUS_ACCEPTED,
 	OCPP_AUTH_STATUS_BLOCKED,
 	OCPP_AUTH_STATUS_EXPIRED,
