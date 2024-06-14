@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 #include "ocpp/type.h"
+#include <stdint.h>
 
 struct ocpp_Authorize {
 	char idTag[20+1];
@@ -132,7 +133,7 @@ struct ocpp_Reset_conf {
 struct ocpp_StartTransaction {
 	int connectorId;
 	char idTag[20+1];
-	int meterStart;
+	uint64_t meterStart;
 	int reservationId;
 	time_t timestamp;
 };
@@ -158,7 +159,7 @@ struct ocpp_StatusNotification_conf {
 
 struct ocpp_StopTransaction {
 	char idTag[20+1];
-	int meterStop;
+	uint64_t meterStop;
 	time_t timestamp;
 	int transactionId;
 	ocpp_stop_reason_t reason;
