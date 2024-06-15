@@ -89,6 +89,7 @@ typedef enum {
 } ocpp_measurand_t;
 
 typedef enum {
+	OCPP_PHASE_UNKNOWN,
 	OCPP_PHASE_L1,
 	OCPP_PHASE_L2,
 	OCPP_PHASE_L3,
@@ -102,6 +103,7 @@ typedef enum {
 } ocpp_phase_t;
 
 typedef enum {
+	OCPP_LOCATION_UNKNOWN,
 	OCPP_LOCATION_BODY,
 	OCPP_LOCATION_CABLE,
 	OCPP_LOCATION_EV,
@@ -110,6 +112,7 @@ typedef enum {
 } ocpp_location_t;
 
 typedef enum {
+	OCPP_UNIT_UNKNOWN,
 	OCPP_UNIT_WH,
 	OCPP_UNIT_KWH,
 	OCPP_UNIT_VARH,
@@ -134,6 +137,7 @@ typedef enum {
 } ocpp_availability_t;
 
 typedef enum {
+	OCPP_VALUE_FORMAT_UNKNOWN,
 	OCPP_VALUE_FORMAT_RAW,
 	OCPP_VALUE_FORMAT_SIGNED,
 } ocpp_value_format_t;
@@ -144,6 +148,7 @@ typedef enum {
 } ocpp_charging_unit_t;
 
 typedef enum {
+	OCPP_READ_CTX_UNKNOWN,
 	OCPP_READ_CTX_INT_BEGIN,
 	OCPP_READ_CTX_INT_END,
 	OCPP_READ_CTX_OTHER,
@@ -397,7 +402,7 @@ struct ocpp_SampledValue {
 
 struct ocpp_MeterValue {
 	time_t timestamp;
-	struct ocpp_SampledValue sampledValue;
+	struct ocpp_SampledValue sampledValue[0];
 };
 
 #if defined(__cplusplus)

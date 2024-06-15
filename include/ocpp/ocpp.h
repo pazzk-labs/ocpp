@@ -22,90 +22,30 @@ extern "C" {
 
 #include "ocpp/overrides.h"
 
-typedef void (*ocpp_event_callback_t)(int err,
+enum ocpp_event {
+	OCPP_EVENT_MESSAGE_INCOMING,
+	OCPP_EVENT_MESSAGE_OUTGOING,
+	OCPP_EVENT_MESSAGE_FREE,
+	/* negative for errors */
+};
+
+typedef int ocpp_event_t;
+typedef void (*ocpp_event_callback_t)(ocpp_event_t event_type,
 		const struct ocpp_message *message, void *ctx);
-
-union ocpp_message_req {
-	struct ocpp_Authorize Authorize;
-	struct ocpp_BootNotification BootNotification;
-	struct ocpp_ChangeAvailability ChangeAvailability;
-	struct ocpp_ChangeConfiguration ChangeConfiguration;
-	struct ocpp_ClearCache ClearCache;
-	struct ocpp_DataTransfer DataTransfer;
-	struct ocpp_GetConfiguration GetConfiguration;
-	struct ocpp_Heartbeat HeartBeat;
-	struct ocpp_MeterValues MeterValues;
-	struct ocpp_RemoteStartTransaction RemoteStartTransaction;
-	struct ocpp_RemoteStopTransaction RemoteStopTransaction;
-	struct ocpp_Reset Reset;
-	struct ocpp_StartTransaction StartTransaction;
-	struct ocpp_StatusNotification StatusNotification;
-	struct ocpp_StopTransaction StopTransaction;
-	struct ocpp_UnlockConnector UnlockConnector;
-
-	struct ocpp_DiagnosticsStatusNotification DiagnosticsStatusNotification;
-	struct ocpp_FirmwareStatusNotification FirmwareStatusNotification;
-	struct ocpp_GetDiagnostics GetDiagnostics;
-	struct ocpp_UpdateFirmware UpdateFirmware;
-
-	struct ocpp_GetLocalListVersion GetLocalListVersion;
-	struct ocpp_SendLocalList SendLocalList;
-
-	struct ocpp_CancelReservation CancelReservation;
-	struct ocpp_ReserveNow ReserveNow;
-
-	struct ocpp_ClearChargingProfile ClearChargingProfile;
-	struct ocpp_GetCompositeSchedule GetCompositeSchedule;
-	struct ocpp_SetChargingProfile SetChargingProfile;
-
-	struct ocpp_TriggerMessage TriggerMessage;
-};
-
-union ocpp_message_conf {
-	struct ocpp_Authorize_conf Authorize;
-	struct ocpp_BootNotification_conf BootNotification;
-	struct ocpp_ChangeAvailability_conf ChangeAvailability;
-	struct ocpp_ChangeConfiguration_conf ChangeConfiguration;
-	struct ocpp_ClearCache_conf ClearCache;
-	struct ocpp_DataTransfer_conf DataTransfer;
-	struct ocpp_GetConfiguration_conf GetConfiguration;
-	struct ocpp_Heartbeat_conf HeartBeat;
-	struct ocpp_MeterValues_conf MeterValues;
-	struct ocpp_RemoteStartTransaction_conf RemoteStartTransaction;
-	struct ocpp_RemoteStopTransaction_conf RemoteStopTransaction;
-	struct ocpp_Reset_conf Reset;
-	struct ocpp_StartTransaction_conf StartTransaction;
-	struct ocpp_StatusNotification_conf StatusNotification;
-	struct ocpp_StopTransaction_conf StopTransaction;
-	struct ocpp_UnlockConnector_conf UnlockConnector;
-
-	struct ocpp_DiagnosticsStatusNotification_conf DiagnosticsStatusNotification;
-	struct ocpp_FirmwareStatusNotification_conf FirmwareStatusNotification;
-	struct ocpp_GetDiagnostics_conf GetDiagnostics;
-	struct ocpp_UpdateFirmware_conf UpdateFirmware;
-
-	struct ocpp_GetLocalListVersion_conf GetLocalListVersion;
-	struct ocpp_SendLocalList_conf SendLocalList;
-
-	struct ocpp_CancelReservation_conf CancelReservation;
-	struct ocpp_ReserveNow_conf ReserveNow;
-
-	struct ocpp_ClearChargingProfile_conf ClearChargingProfile;
-	struct ocpp_GetCompositeSchedule_conf GetCompositeSchedule;
-	struct ocpp_SetChargingProfile_conf SetChargingProfile;
-
-	struct ocpp_TriggerMessage_conf TriggerMessage;
-};
 
 struct ocpp_message {
 	char id[OCPP_MESSAGE_ID_MAXLEN];
 	ocpp_message_role_t role;
 	ocpp_message_t type;
 
-	union {
-		union ocpp_message_req req;
-		union ocpp_message_conf conf;
-	} fmt;
+	struct {
+		union {
+			const void *request;
+			const void *response;
+			void *data;
+		} fmt;
+		size_t size;
+	} payload;
 };
 
 int ocpp_init(ocpp_event_callback_t cb, void *cb_ctx);

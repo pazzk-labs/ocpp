@@ -4,7 +4,6 @@ COMPONENT_NAME = Core
 
 SRC_FILES = \
 	../src/ocpp.c \
-	../src/core/messages.c \
 	../src/core/configuration.c \
 
 TEST_SRC_FILES = \

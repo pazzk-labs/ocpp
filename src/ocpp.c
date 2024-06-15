@@ -113,6 +113,13 @@ static struct message *alloc_message(void)
 
 static void free_message(struct message *msg)
 {
+	if (m.event_callback) {
+		ocpp_unlock();
+		(*m.event_callback)(OCPP_EVENT_MESSAGE_FREE,
+				&msg->body, m.event_callback_ctx);
+		ocpp_lock();
+	}
+
 	memset(msg, 0, sizeof(*msg));
 }
 
@@ -390,7 +397,8 @@ static int push_message(const char *id, ocpp_message_t type,
 	struct message *msg = new_message(id, type, err);
 
 	if (msg) {
-		memcpy(&msg->body.fmt, data, datasize);
+		msg->body.payload.fmt.request = data;
+		msg->body.payload.size = datasize;
 		msg->expiry = timer;
 		(*f)(msg);
 	}
@@ -437,7 +445,7 @@ static const char **get_typestr_array(void)
 const char *ocpp_stringify_type(ocpp_message_t msgtype)
 {
 	const char **msgstr = get_typestr_array();
-	return msgtype >= OCPP_MSG_MAX? NULL : msgstr[msgtype];
+	return msgtype >= OCPP_MSG_MAX? "UnknownMessage" : msgstr[msgtype];
 }
 
 ocpp_message_t ocpp_get_type_from_string(const char *typestr)
