@@ -69,6 +69,7 @@ struct ocpp_ClearCache_conf {
 struct ocpp_DataTransfer {
 	char vendorId[255+1]; /* required */
 	char messageId[50+1];
+	char padding[13];
 	char data[0];
 };
 
