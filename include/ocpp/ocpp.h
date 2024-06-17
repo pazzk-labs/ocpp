@@ -22,6 +22,10 @@ extern "C" {
 
 #include "ocpp/overrides.h"
 
+#if !defined(OCPP_DEFAULT_TX_TIMEOUT_SEC)
+#define OCPP_DEFAULT_TX_TIMEOUT_SEC		10
+#endif
+
 enum ocpp_event {
 	OCPP_EVENT_MESSAGE_INCOMING,
 	OCPP_EVENT_MESSAGE_OUTGOING,

@@ -14,9 +14,6 @@
 #if !defined(OCPP_TX_POOL_LEN)
 #define OCPP_TX_POOL_LEN			8
 #endif
-#if !defined(OCPP_DEFAULT_TX_TIMEOUT_SEC)
-#define OCPP_DEFAULT_TX_TIMEOUT_SEC		5
-#endif
 #if !defined(OCPP_DEFAULT_TX_RETRIES)
 #define OCPP_DEFAULT_TX_RETRIES			1
 #endif
@@ -167,7 +164,7 @@ static bool is_transaction_related(const struct message *msg)
 	switch (msg->body.type) {
 	case OCPP_MSG_START_TRANSACTION: /* fall through */
 	case OCPP_MSG_STOP_TRANSACTION: /* fall through */
-	case OCPP_MSG_METER_VALUES: /* fall through */
+	case OCPP_MSG_METER_VALUES:
 		return true;
 	default:
 		return false;
