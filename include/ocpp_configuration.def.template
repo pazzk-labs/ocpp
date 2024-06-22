@@ -52,11 +52,11 @@ OCPP_CONFIG(MaxChargingProfilesInstalled,	R,	INT,		0)
 
 /* Security */
 OCPP_CONFIG(AdditionalRootCertificateCheck,	R,	BOOL,		0)
-OCPP_CONFIG(AuthorizationKey,			RW,	STR(40),	0)
+OCPP_CONFIG(AuthorizationKey,			W,	STR(40),	0)
 OCPP_CONFIG(CertificateSignedMaxChainSize,	R,	INT,		0)
 OCPP_CONFIG(CertificateStoreMaxLength,		R,	INT,		0)
-OCPP_CONFIG(CpoName,				R,	STR(64),	0)
-OCPP_CONFIG(SecurityProfile,			R,	INT,		0)
+OCPP_CONFIG(CpoName,				RW,	STR(64),	0)
+OCPP_CONFIG(SecurityProfile,			RW,	INT,		0)
 
 /* Custom */
 OCPP_CONFIG(LibraryVersion,			R,	INT,		OCPP_LIBRARY_VERSION)

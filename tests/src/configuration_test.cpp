@@ -64,11 +64,11 @@ TEST(Configuration, set_ShouldSetTheConfiguration) {
 	ocpp_set_configuration("MeterValuesSampledData", &expected, sizeof(expected));
 	ocpp_get_configuration("MeterValuesSampledData", &actual, sizeof(actual), NULL);
 	LONGS_EQUAL(0x180000, actual);
+}
 
+TEST(Configuration, get_ShouldReturnEACCES_WhenWriteOnlyGiven) {
 	char buf[16];
-	ocpp_set_configuration("AuthorizationKey", "My Auth Key!", 12);
-	ocpp_get_configuration("AuthorizationKey", buf, sizeof(buf), NULL);
-	STRCMP_EQUAL("My Auth Key!", buf);
+	LONGS_EQUAL(-EACCES, ocpp_get_configuration("AuthorizationKey", buf, sizeof(buf), NULL));
 }
 
 TEST(Configuration, is_writable_ShouldReturnItsAccessibility) {

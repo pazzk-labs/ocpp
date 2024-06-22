@@ -147,16 +147,38 @@ static void set_default_value(void)
 #undef BOOL
 }
 
-static bool is_writable(configuration_t key)
+static bool is_readable(configuration_t key)
 {
 	switch (key) {
-#define R					false
+#define R					true
+#define W					false
 #define RW					true
 #define OCPP_CONFIG(key, accessbility, type, value)	\
 	case key: return accessbility;
 #include OCPP_CONFIGURATION_DEFINES
 #undef OCPP_CONFIG
 #undef RW
+#undef W
+#undef R
+	case CONFIGURATION_MAX: /* fall through */
+	case UnknownConfiguration: /* fall through */
+	default:
+		return false;
+	}
+}
+
+static bool is_writable(configuration_t key)
+{
+	switch (key) {
+#define R					false
+#define W					true
+#define RW					true
+#define OCPP_CONFIG(key, accessbility, type, value)	\
+	case key: return accessbility;
+#include OCPP_CONFIGURATION_DEFINES
+#undef OCPP_CONFIG
+#undef RW
+#undef W
 #undef R
 	case CONFIGURATION_MAX: /* fall through */
 	case UnknownConfiguration: /* fall through */
@@ -325,6 +347,17 @@ bool ocpp_is_configuration_writable(const char * const keystr)
 	}
 
 	return is_writable(key);
+}
+
+bool ocpp_is_configuration_readable(const char * const keystr)
+{
+	configuration_t key = get_key_from_keystr(keystr);
+
+	if (key == UnknownConfiguration) {
+		return false;
+	}
+
+	return is_readable(key);
 }
 
 void ocpp_reset_configuration(void)

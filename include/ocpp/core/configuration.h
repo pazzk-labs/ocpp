@@ -58,6 +58,7 @@ int ocpp_get_configuration(const char * const keystr,
 int ocpp_get_configuration_by_index(int index,
 		void *buf, size_t bufsize, bool *readonly);
 bool ocpp_is_configuration_writable(const char * const keystr);
+bool ocpp_is_configuration_readable(const char * const keystr);
 size_t ocpp_get_configuration_size(const char * const keystr);
 ocpp_configuration_data_t ocpp_get_configuration_data_type(
 		const char * const keystr);
