@@ -374,8 +374,9 @@ struct ocpp_ChargingSchedule {
 	int duration;
 	time_t startSchedule;
 	ocpp_charging_unit_t chargingRateUnit;
-	struct ocpp_ChargingSchedulePeriod chargingSchedulePeriod;
 	int minChargingRate_tenth;
+	int nr_chargingSchedulePeriod;
+	struct ocpp_ChargingSchedulePeriod chargingSchedulePeriod[0];
 };
 
 struct ocpp_ChargingProfile {
