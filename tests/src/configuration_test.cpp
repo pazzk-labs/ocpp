@@ -47,11 +47,11 @@ TEST(Configuration, has_configuration_ShouldReturnFalse_WhenInvalidOneGiven) {
 }
 
 TEST(Configuration, count_ShouldReturnTheNumberOfConfigurations) {
-	LONGS_EQUAL(54, ocpp_count_configurations());
+	LONGS_EQUAL(55, ocpp_count_configurations());
 }
 
 TEST(Configuration, get_len_ShouldReturnWholeConfigurationSize) {
-	LONGS_EQUAL(270, ocpp_compute_configuration_size());
+	LONGS_EQUAL(271, ocpp_compute_configuration_size());
 }
 
 TEST(Configuration, set_ShouldSetTheConfiguration) {

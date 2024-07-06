@@ -215,7 +215,7 @@ size_t ocpp_compute_configuration_size(void)
 
 int ocpp_copy_configuration_from(const void *data, size_t datasize)
 {
-	if (data == NULL || datasize != sizeof(configurations_pool)) {
+	if (data == NULL || datasize > sizeof(configurations_pool)) {
 		return -EINVAL;
 	}
 
@@ -292,6 +292,9 @@ int ocpp_get_configuration(const char * const keystr,
 
 	if (key == UnknownConfiguration) {
 		return -EINVAL;
+	}
+	if (!is_readable(key)) {
+		return -EACCES;
 	}
 
 	if (readonly) {
