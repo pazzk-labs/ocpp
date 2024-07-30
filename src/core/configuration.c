@@ -18,7 +18,12 @@
 #endif
 
 #if !defined(MIN)
-#define MIN(a, b)			(((a) > (b))? (b) : (a))
+#define MIN(a, b) ({          \
+    __typeof__(a) _a = (a);   \
+    __typeof__(b) _b = (b);   \
+    _a > _b ? _b : _a;        \
+})
+
 #endif
 
 #define CONF_SIZE(x)			(x)
