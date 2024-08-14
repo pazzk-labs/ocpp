@@ -175,12 +175,10 @@ static bool should_drop(struct message *msg)
 {
 	uint32_t max_attempts = OCPP_DEFAULT_TX_RETRIES; /* non-transactional */
 
-	/* never drop BootNotification */
-	if (msg->body.type == OCPP_MSG_BOOTNOTIFICATION) {
+	/* never drop BootNotification and transaction-related messages. */
+	if (msg->body.type == OCPP_MSG_BOOTNOTIFICATION ||
+			is_transaction_related(msg)) {
 		return false;
-	} else if (is_transaction_related(msg)) {
-		ocpp_get_configuration("TransactionMessageAttempts",
-				&max_attempts, sizeof(max_attempts), NULL);
 	}
 
 	if (msg->attempts >= max_attempts) {
@@ -223,14 +221,6 @@ static time_t calc_message_timeout(const struct message *msg, const time_t *now)
 	return *now + interval;
 }
 
-static time_t calc_message_backoff_period(const struct message *msg,
-		const time_t *now)
-{
-	uint32_t interval = OCPP_DEFAULT_TX_TIMEOUT_SEC;
-
-	return *now + (interval * msg->attempts);
-}
-
 static void send_message(struct message *msg, const time_t *now)
 {
 	msg->attempts++;
@@ -248,8 +238,11 @@ static void send_message(struct message *msg, const time_t *now)
 
 		m.tx.timestamp = *now;
 	} else {
-		msg->expiry = calc_message_backoff_period(msg, now);
-		put_msg_wait(msg);
+		if (msg->attempts < OCPP_DEFAULT_TX_RETRIES ||
+				is_transaction_related(msg) ||
+				msg->body.type == OCPP_MSG_BOOTNOTIFICATION) {
+			put_msg_wait(msg);
+		}
 	}
 }
 
@@ -338,8 +331,20 @@ static void process_central_request(const struct ocpp_message *received)
 static void process_central_response(const struct ocpp_message *received,
 		struct message *req)
 {
-	(void)received;
 	del_msg_wait(req);
+
+	if (received->role == OCPP_MSG_ROLE_CALLERROR &&
+			is_transaction_related(req)) {
+		uint32_t max_attempts = OCPP_DEFAULT_TX_RETRIES;
+		ocpp_get_configuration("TransactionMessageAttempts",
+				&max_attempts, sizeof(max_attempts),
+				NULL);
+		if (req->attempts < max_attempts) {
+			put_msg_ready_infront(req);
+			return;
+		}
+	}
+
 	free_message(req);
 }
 

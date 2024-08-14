@@ -122,7 +122,7 @@ TEST(Core, step_ShouldDropMessage_WhenFailedSendingMoreThanRetries) {
 	step(OCPP_DEFAULT_TX_TIMEOUT_SEC*2);
 }
 
-IGNORE_TEST(Core, step_ShouldSendHeartBeat_WhenNoMessageSentDuringHeartBeatInterval) {
+TEST(Core, step_ShouldSendHeartBeat_WhenNoMessageSentDuringHeartBeatInterval) {
 	int interval;
 	ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
 	mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
@@ -136,6 +136,7 @@ IGNORE_TEST(Core, step_ShouldSendHeartBeat_WhenNoMessageSentDuringHeartBeatInter
 	};
 	memcpy(resp.id, sent.message_id, sizeof(sent.message_id));
 	mock().expectOneCall("ocpp_recv").withOutputParameterReturning("msg", &resp, sizeof(resp));
+	mock().expectOneCall("on_ocpp_event").withParameter("event_type", 2);
 	mock().expectOneCall("on_ocpp_event").withParameter("event_type", 0);
 	step(interval*2-1);
 	check_rx(OCPP_MSG_ROLE_CALLRESULT, OCPP_MSG_HEARTBEAT);
@@ -144,7 +145,7 @@ IGNORE_TEST(Core, step_ShouldSendHeartBeat_WhenNoMessageSentDuringHeartBeatInter
 	step(interval*2);
 }
 
-IGNORE_TEST(Core, step_ShouldNotSendHeartBeat_WhenAnyMessageSentDuringHeartBeatInterval) {
+TEST(Core, step_ShouldNotSendHeartBeat_WhenAnyMessageSentDuringHeartBeatInterval) {
 	int interval;
 	ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
 	ocpp_send_datatransfer(&(const struct ocpp_DataTransfer) {
@@ -161,9 +162,16 @@ IGNORE_TEST(Core, step_ShouldNotSendHeartBeat_WhenAnyMessageSentDuringHeartBeatI
 	};
 	memcpy(resp.id, sent.message_id, sizeof(sent.message_id));
 	mock().expectOneCall("ocpp_recv").withOutputParameterReturning("msg", &resp, sizeof(resp));
+	mock().expectOneCall("on_ocpp_event").withParameter("event_type", 2);
 	mock().expectOneCall("on_ocpp_event").withParameter("event_type", 0);
 	step(interval*2-1);
 	check_rx(OCPP_MSG_ROLE_CALLRESULT, OCPP_MSG_DATA_TRANSFER);
+}
+
+TEST(Core, ShouldDropTransactionRelatedMessages_WhenServerReponsesWithErrorMoreThanMaxAttemptsConfigured) {
+}
+
+TEST(Core, ShouldSendTransactionRelatedmessagesIndefinitely_WhenTransportErrors) {
 }
 
 TEST(Core, t) {
