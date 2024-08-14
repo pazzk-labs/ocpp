@@ -386,11 +386,6 @@ static int push_message(const char *id, ocpp_message_t type,
 		const void *data, size_t datasize,
 		time_t timer, list_add_func_t f, bool err)
 {
-	/* HeartBeat is sent internally on itself. */
-	if (type == OCPP_MSG_HEARTBEAT) {
-		return -EALREADY;
-	}
-
 	struct message *msg = new_message(id, type, err);
 
 	if (msg) {
