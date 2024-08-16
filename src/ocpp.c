@@ -434,6 +434,17 @@ static const char **get_typestr_array(void)
 		[OCPP_MSG_GET_COMPOSITE_SCHEDULE] = "GetCompositeSchedule",
 		[OCPP_MSG_SET_CHARGING_PROFILE] = "SetChargingProfile",
 		[OCPP_MSG_TRIGGER_MESSAGE] = "TriggerMessage",
+		[OCPP_MSG_CERTIFICATE_SIGNED] = "CertificateSigned",
+		[OCPP_MSG_DELETE_CERTIFICATE] = "DeleteCertificate",
+		[OCPP_MSG_EXTENDED_TRIGGER_MESSAGE] = "ExtendedTriggerMessage",
+		[OCPP_MSG_GET_INSTALLED_CERTIFICATE_IDS] = "GetInstalledCertificateIds",
+		[OCPP_MSG_GET_LOG] = "GetLog",
+		[OCPP_MSG_INSTALL_CERTIFICATE] = "InstallCertificate",
+		[OCPP_MSG_LOG_STATUS_NOTIFICATION] = "LogStatusNotification",
+		[OCPP_MSG_SECURITY_EVENT_NOTIFICATION] = "SecurityEventNotification",
+		[OCPP_MSG_SIGN_CERTIFICATE] = "SignCertificate",
+		[OCPP_MSG_SIGNED_FIRMWARE_STATUS_NOTIFICATION] = "SignedFirmwareStatusNotification",
+		[OCPP_MSG_SIGNED_UPDATE_FIRMWARE] = "SignedUpdateFirmware",
 	};
 
 	return msgstr;
