@@ -292,10 +292,13 @@ static int process_periodic_messages(const time_t *now)
 {
 	if (should_send_heartbeat(now)) {
 		struct message *msg = new_message(NULL, OCPP_MSG_HEARTBEAT, 0);
-		if (msg) {
-			put_msg_ready(msg);
-			process_queued_messages(now);
+
+		if (!msg) {
+			return -ENOMEM;
 		}
+
+		put_msg_ready(msg);
+		process_queued_messages(now);
 	}
 
 	return 0;
@@ -393,14 +396,35 @@ static int push_message(const char *id, ocpp_message_t type,
 {
 	struct message *msg = new_message(id, type, err);
 
-	if (msg) {
-		msg->body.payload.fmt.request = data;
-		msg->body.payload.size = datasize;
-		msg->expiry = timer;
-		(*f)(msg);
+	if (!msg) {
+		return -ENOMEM;
 	}
 
+	msg->body.payload.fmt.request = data;
+	msg->body.payload.size = datasize;
+	msg->expiry = timer;
+	(*f)(msg);
+
 	return 0;
+}
+
+static int remove_oldest(void)
+{
+	struct list *p;
+	struct list *t;
+
+	list_for_each_safe(p, t, &m.tx.ready) {
+		struct message *msg = container_of(p, struct message, link);
+		if (msg->body.type != OCPP_MSG_BOOTNOTIFICATION &&
+				msg->body.type != OCPP_MSG_START_TRANSACTION &&
+				msg->body.type != OCPP_MSG_STOP_TRANSACTION) {
+			del_msg_ready(msg);
+			free_message(msg);
+			return 0;
+		}
+	}
+
+	return -ENOMEM;
 }
 
 static const char **get_typestr_array(void)
@@ -482,10 +506,19 @@ ocpp_message_t ocpp_get_type_from_idstr(const char *idstr)
 	return req->body.type;
 }
 
-int ocpp_push_request(ocpp_message_t type, const void *data, size_t datasize)
+int ocpp_push_request(ocpp_message_t type, const void *data, size_t datasize,
+		bool force)
 {
 	ocpp_lock();
+
 	int rc = push_message(NULL, type, data, datasize, 0, put_msg_ready, 0);
+
+	if (rc != 0 && force) {
+		remove_oldest();
+		rc = push_message(NULL, type, data, datasize, 0,
+				put_msg_ready, 0);
+	}
+
 	ocpp_unlock();
 
 	return rc;

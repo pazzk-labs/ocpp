@@ -5,6 +5,7 @@ COMPONENT_NAME = Core
 SRC_FILES = \
 	../src/ocpp.c \
 	../src/core/configuration.c \
+	../examples/messages.c \
 
 TEST_SRC_FILES = \
 	src/core_test.cpp \

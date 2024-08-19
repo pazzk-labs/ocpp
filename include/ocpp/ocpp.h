@@ -54,7 +54,24 @@ struct ocpp_message {
 
 int ocpp_init(ocpp_event_callback_t cb, void *cb_ctx);
 int ocpp_step(void);
-int ocpp_push_request(ocpp_message_t type, const void *data, size_t datasize);
+/**
+ * @bref Function to push a request to the OCPP server.
+ *
+ * @param[in] type The type of the OCPP message.
+ * @param[in] data Pointer to the data to be sent.
+ * @param[in] datasize The size of the data to be sent.
+ * @param[in] force If set to true, the request will be pushed even if the queue
+ *            is full.
+ *
+ * @note The oldest request will be dropped if the queue is full and `force` is
+ *       set. If the oldest request is StartTransaction, StopTransaction or
+ *       BootNotification, the next oldest request will be dropped.
+ *
+ * @return Returns 0 if the request was successfully pushed, non-zero
+ *         otherwise.
+ */
+int ocpp_push_request(ocpp_message_t type, const void *data, size_t datasize,
+		bool force);
 int ocpp_push_request_defer(ocpp_message_t type,
 		const void *data, size_t datasize, uint32_t timer_sec);
 int ocpp_push_response(const struct ocpp_message *req,

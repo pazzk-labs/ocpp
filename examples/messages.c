@@ -15,7 +15,7 @@ int ocpp_send_bootnotification(const struct ocpp_BootNotification *msg)
 		return -EINVAL;
 	}
 
-	return ocpp_push_request(OCPP_MSG_BOOTNOTIFICATION, msg, sizeof(*msg));
+	return ocpp_push_request(OCPP_MSG_BOOTNOTIFICATION, msg, sizeof(*msg), false);
 }
 
 int ocpp_send_datatransfer(const struct ocpp_DataTransfer *msg)
@@ -24,5 +24,5 @@ int ocpp_send_datatransfer(const struct ocpp_DataTransfer *msg)
 		return -EINVAL;
 	}
 
-	return ocpp_push_request(OCPP_MSG_DATA_TRANSFER, msg, sizeof(*msg));
+	return ocpp_push_request(OCPP_MSG_DATA_TRANSFER, msg, sizeof(*msg), false);
 }

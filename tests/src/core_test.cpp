@@ -168,6 +168,52 @@ TEST(Core, step_ShouldNotSendHeartBeat_WhenAnyMessageSentDuringHeartBeatInterval
 	check_rx(OCPP_MSG_ROLE_CALLRESULT, OCPP_MSG_DATA_TRANSFER);
 }
 
+TEST(Core, ShouldSendStartTransaction_WhenQueueIsFull) {
+	int interval;
+	ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
+	struct ocpp_DataTransfer msg[8];
+	struct ocpp_StartTransaction start;
+	for (int i = 0; i < 8; i++) {
+		LONGS_EQUAL(0, ocpp_push_request(OCPP_MSG_DATA_TRANSFER, &msg[i], sizeof(msg[i]), false));
+	}
+
+	LONGS_EQUAL(-ENOMEM, ocpp_push_request(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), false));
+	mock().expectOneCall("on_ocpp_event").withParameter("event_type", OCPP_EVENT_MESSAGE_FREE);
+	LONGS_EQUAL(0, ocpp_push_request(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), true));
+
+	mock().expectNCalls(6, "on_ocpp_event").withParameter("event_type", OCPP_EVENT_MESSAGE_FREE);
+	for (int i = 0; i < 7*OCPP_DEFAULT_TX_RETRIES; i++) {
+		mock().expectOneCall("ocpp_send").andReturnValue(0);
+		mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+		step(interval*i);
+		check_tx(OCPP_MSG_ROLE_CALL, OCPP_MSG_DATA_TRANSFER);
+	}
+
+	mock().expectOneCall("on_ocpp_event").withParameter("event_type", OCPP_EVENT_MESSAGE_FREE);
+	mock().expectOneCall("ocpp_send").andReturnValue(0);
+	mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+	step(interval*OCPP_DEFAULT_TX_RETRIES*7);
+	check_tx(OCPP_MSG_ROLE_CALL, OCPP_MSG_START_TRANSACTION);
+
+	mock().expectOneCall("ocpp_send").andReturnValue(0);
+	mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+	step(interval*OCPP_DEFAULT_TX_RETRIES*8);
+	check_tx(OCPP_MSG_ROLE_CALL, OCPP_MSG_START_TRANSACTION);
+}
+
+TEST(Core, ShouldReturnNOMEM_WhenQueueIsFullWithTransactionRelatedMessages) {
+	struct ocpp_DataTransfer data;
+	struct ocpp_StartTransaction start;
+	for (int i = 0; i < 8; i++) {
+		LONGS_EQUAL(0, ocpp_push_request(OCPP_MSG_DATA_TRANSFER, &data, sizeof(data), false));
+	}
+	mock().expectNCalls(8, "on_ocpp_event").withParameter("event_type", OCPP_EVENT_MESSAGE_FREE);
+	for (int i = 0; i < 8; i++) {
+		LONGS_EQUAL(0, ocpp_push_request(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), true));
+	}
+	LONGS_EQUAL(-ENOMEM, ocpp_push_request(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), true));
+}
+
 TEST(Core, ShouldDropTransactionRelatedMessages_WhenServerReponsesWithErrorMoreThanMaxAttemptsConfigured) {
 }
 
