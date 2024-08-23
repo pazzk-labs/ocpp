@@ -234,10 +234,12 @@ typedef enum {
 
 typedef enum {
 	OCPP_TRIGGER_BOOT_NOTIFICATION,
+	OCPP_TRIGGER_LOG_STATUS_NOTIFICATION, /* extended */
 	OCPP_TRIGGER_DIAGNOSTICS_STATUS,
 	OCPP_TRIGGER_FIRMWARE_STATUS,
 	OCPP_TRIGGER_HEARTBEAT,
 	OCPP_TRIGGER_METER_VALUE,
+	OCPP_TRIGGER_SIGN_CP_CERTIFICATE, /* extended */
 	OCPP_TRIGGER_STATUS_NOTIFICATION,
 } ocpp_trigger_message_t;
 
@@ -359,6 +361,17 @@ typedef enum {
 	OCPP_PROFILE_SMART_CHARGING		= 0x0010,
 	OCPP_PROFILE_REMOTE_TRIGGER		= 0x0020,
 } ocpp_profile_t;
+
+typedef enum {
+	OCPP_HASH_SHA256,
+	OCPP_HASH_SHA384,
+	OCPP_HASH_SHA512,
+} ocpp_hash_t;
+
+typedef enum {
+	OCPP_LOG_DIAGNOSTICS,
+	OCPP_LOG_SECURITY,
+} ocpp_log_t;
 
 struct ocpp_KeyValue {
 	char key[50+1];
