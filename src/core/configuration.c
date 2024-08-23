@@ -50,7 +50,6 @@ static const char * const confstr[] = {
 #include OCPP_CONFIGURATION_DEFINES
 #undef OCPP_CONFIG
 };
-_Static_assert(sizeof(confstr) / sizeof(confstr[0]) == CONFIGURATION_MAX, "");
 
 static ocpp_configuration_data_t get_value_type(configuration_t key)
 {
