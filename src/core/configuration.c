@@ -197,6 +197,23 @@ static configuration_t get_key_from_keystr(const char * const keystr)
 	return UnknownConfiguration;
 }
 
+static int get_configuration(configuration_t key,
+		void *buf, size_t bufsize, bool *readonly)
+{
+	if (key >= CONFIGURATION_MAX) {
+		return -EINVAL;
+	}
+
+	if (readonly) {
+		*readonly = !is_writable(key) && is_readable(key);
+	}
+
+	memcpy(buf, configurations[key].value,
+			MIN(get_value_cap(key), bufsize));
+
+	return 0;
+}
+
 bool ocpp_has_configuration(const char * const keystr)
 {
 	return get_key_from_keystr(keystr) != UnknownConfiguration;
@@ -289,46 +306,22 @@ int ocpp_get_configuration(const char * const keystr,
 {
 	configuration_t key = get_key_from_keystr(keystr);
 
-	if (key == UnknownConfiguration) {
-		return -EINVAL;
-	}
-	if (!is_readable(key)) {
-		return -EACCES;
-	}
-
-	if (readonly) {
-		*readonly = !is_writable(key);
-	}
-
 	ocpp_configuration_lock();
-
-	memcpy(buf, configurations[key].value,
-			MIN(get_value_cap(key), bufsize));
-
+	int rc = get_configuration(key, buf, bufsize, readonly);
 	ocpp_configuration_unlock();
 
-	return 0;
+	return rc;
 }
 
 int ocpp_get_configuration_by_index(int index,
 		void *buf, size_t bufsize, bool *readonly)
 {
-	if (index >= CONFIGURATION_MAX) {
-		return -EINVAL;
-	}
-
-	if (readonly) {
-		*readonly = !is_writable((configuration_t)index);
-	}
-
 	ocpp_configuration_lock();
-
-	memcpy(buf, configurations[index].value,
-			MIN(get_value_cap((configuration_t)index), bufsize));
-
+	int rc = get_configuration((configuration_t)index,
+			buf, bufsize, readonly);
 	ocpp_configuration_unlock();
 
-	return 0;
+	return rc;
 }
 
 const char *ocpp_get_configuration_keystr_from_index(int index)
