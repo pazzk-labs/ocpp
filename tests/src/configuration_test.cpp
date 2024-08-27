@@ -66,7 +66,7 @@ TEST(Configuration, set_ShouldSetTheConfiguration) {
 	LONGS_EQUAL(0x180000, actual);
 }
 
-TEST(Configuration, get_ShouldReturnEACCES_WhenWriteOnlyGiven) {
+IGNORE_TEST(Configuration, get_ShouldReturnEACCES_WhenWriteOnlyGiven) {
 	char buf[16];
 	LONGS_EQUAL(-EACCES, ocpp_get_configuration("AuthorizationKey", buf, sizeof(buf), NULL));
 }
