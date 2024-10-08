@@ -19,6 +19,7 @@ extern "C" {
 #include "ocpp/reserve/messages.h"
 #include "ocpp/sc/messages.h"
 #include "ocpp/trigger/messages.h"
+#include "ocpp/security/messages.h"
 
 #include "ocpp/overrides.h"
 
