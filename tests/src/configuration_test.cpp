@@ -24,7 +24,7 @@ TEST_GROUP(Configuration) {
 
 TEST(Configuration, reset_ShouldSetTheDefaultValues) {
 	int connTimeout;
-	int authRemoteTxReq;
+	bool authRemoteTxReq;
 	int blink;
 
 	ocpp_get_configuration("ConnectionTimeOut", &connTimeout, sizeof(connTimeout), NULL);

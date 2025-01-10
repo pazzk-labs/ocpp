@@ -56,6 +56,8 @@ static struct {
 	struct {
 		time_t timestamp;
 	} rx;
+
+	bool boot_accepted;
 } m;
 
 static void add_last_to_list(struct message *msg, struct list *head)
@@ -76,44 +78,50 @@ static void del_from_list(struct message *msg, struct list *head)
 static void put_msg_ready_infront(struct message *msg)
 {
 	add_first_to_list(msg, &m.tx.ready);
-	info("%s pushed in front to ready list",
+	OCPP_DEBUG("%s pushed in front to ready list",
 			ocpp_stringify_type(msg->body.type));
 }
 
 static void put_msg_ready(struct message *msg)
 {
 	add_last_to_list(msg, &m.tx.ready);
-	info("%s pushed to ready list", ocpp_stringify_type(msg->body.type));
+	OCPP_DEBUG("%s pushed to ready list",
+			ocpp_stringify_type(msg->body.type));
 }
 
 static void put_msg_wait(struct message *msg)
 {
 	add_last_to_list(msg, &m.tx.wait);
-	info("%s pushed to wait list", ocpp_stringify_type(msg->body.type));
+	OCPP_DEBUG("%s pushed to wait list",
+			ocpp_stringify_type(msg->body.type));
 }
 
 static void put_msg_timer(struct message *msg)
 {
 	add_last_to_list(msg, &m.tx.timer);
-	info("%s pushed to timer list", ocpp_stringify_type(msg->body.type));
+	OCPP_DEBUG("%s pushed to timer list",
+			ocpp_stringify_type(msg->body.type));
 }
 
 static void del_msg_ready(struct message *msg)
 {
 	del_from_list(msg, &m.tx.ready);
-	info("%s removed from ready list", ocpp_stringify_type(msg->body.type));
+	OCPP_DEBUG("%s removed from ready list",
+			ocpp_stringify_type(msg->body.type));
 }
 
 static void del_msg_wait(struct message *msg)
 {
 	del_from_list(msg, &m.tx.wait);
-	info("%s removed from wait list", ocpp_stringify_type(msg->body.type));
+	OCPP_DEBUG("%s removed from wait list",
+			ocpp_stringify_type(msg->body.type));
 }
 
 static void del_msg_timer(struct message *msg)
 {
 	del_from_list(msg, &m.tx.timer);
-	info("%s removed from timer list", ocpp_stringify_type(msg->body.type));
+	OCPP_DEBUG("%s removed from timer list",
+			ocpp_stringify_type(msg->body.type));
 }
 
 static int count_messages_waiting(void)
@@ -129,6 +137,16 @@ static int count_messages_ticking(void)
 static int count_messages_ready(void)
 {
 	return list_count(&m.tx.ready);
+}
+
+static bool is_boot_accepted(void)
+{
+	return m.boot_accepted;
+}
+
+static void set_boot_accepted(bool accepted)
+{
+	m.boot_accepted = accepted;
 }
 
 static void update_last_tx_timestamp(const time_t *now)
@@ -255,7 +273,8 @@ static bool should_send_heartbeat(const time_t *now)
 	const bool disabled = interval == 0;
 	const uint32_t elapsed = (uint32_t)(*now - m.tx.timestamp);
 
-	if (disabled || elapsed < interval || count_messages_ready() > 0 ||
+	if (disabled || elapsed < interval || !is_boot_accepted() ||
+			count_messages_ready() > 0 ||
 			count_messages_waiting() > 0) {
 		return false;
 	}
@@ -304,7 +323,7 @@ static void send_message(struct message *msg, const time_t *now)
 	OCPP_INFO("tx: %s.req (%d/%d) waiting up to %lu seconds",
 			ocpp_stringify_type(msg->body.type),
 			msg->attempts, OCPP_DEFAULT_TX_RETRIES,
-			(unsigned)(msg->expiry - *now));
+			(unsigned long)(msg->expiry - *now));
 
 	if (ocpp_send(&msg->body) == 0) {
 		if (msg->body.role == OCPP_MSG_ROLE_CALL) {
@@ -415,37 +434,83 @@ static void process_central_request(const struct ocpp_message *received)
 	OCPP_INFO("rx: %s.req", ocpp_stringify_type(received->type));
 }
 
-static void process_central_response(const struct ocpp_message *received,
+static bool process_central_response_error(const struct ocpp_message *received,
 		struct message *req, const time_t *now)
 {
-	del_msg_wait(req);
+	if (!is_transaction_related(req)) {
+		return true;
+	}
 
-	OCPP_INFO("rx: %s.conf", ocpp_stringify_type(req->body.type));
+	uint32_t max_attempts = OCPP_DEFAULT_TX_RETRIES;
 
-	if (received->role == OCPP_MSG_ROLE_CALLERROR &&
-			is_transaction_related(req)) {
-		uint32_t max_attempts = OCPP_DEFAULT_TX_RETRIES;
-		ocpp_get_configuration("TransactionMessageAttempts",
-				&max_attempts, sizeof(max_attempts), NULL);
-		if (req->attempts < max_attempts) {
-			update_message_expiry(req, now);
-			put_msg_wait(req);
+	ocpp_get_configuration("TransactionMessageAttempts",
+			&max_attempts, sizeof(max_attempts), NULL);
 
-			OCPP_INFO("%s will be sent again at %ld (%d/%d)",
-					ocpp_stringify_type(req->body.type),
-					req->expiry,
-					req->attempts, max_attempts);
-			return;
+	if (req->attempts < max_attempts) {
+		update_message_expiry(req, now);
+		put_msg_wait(req);
+
+		OCPP_INFO("%s will be sent again at %ld (%d/%d)",
+				ocpp_stringify_type(req->body.type),
+				req->expiry, req->attempts, max_attempts);
+		return false;
+	}
+
+	return true;
+}
+
+static bool process_central_response_result(const struct ocpp_message *received,
+		struct message *req, const time_t *now)
+{
+	if (received->type == OCPP_MSG_BOOTNOTIFICATION) {
+		const struct ocpp_BootNotification_conf *p =
+			(const struct ocpp_BootNotification_conf *)
+			received->payload.fmt.response;
+
+		if (p->status == OCPP_BOOT_STATUS_ACCEPTED) {
+			set_boot_accepted(true);
 		}
 	}
 
-	free_message(req);
+	return true;
+}
+
+static int process_central_response(const struct ocpp_message *received,
+		const time_t *now)
+{
+	struct message *req = find_msg_by_idstr(&m.tx.wait, received->id);
+	bool free_req = true;
+
+	if (req == NULL) {
+		OCPP_ERROR("No matching request for response %s",
+				ocpp_stringify_type(received->type));
+		return -ENOLINK;
+	}
+
+	del_msg_wait(req);
+	OCPP_INFO("rx: %s.conf", ocpp_stringify_type(req->body.type));
+
+	if (received->role == OCPP_MSG_ROLE_CALLRESULT) {
+		free_req = process_central_response_result(received, req, now);
+	} else if (received->role == OCPP_MSG_ROLE_CALLERROR) {
+		free_req = process_central_response_error(received, req, now);
+	} else {
+		OCPP_ERROR("Invalid message role: %d", received->role);
+	}
+
+	/* Note that tx timestamp is updated when the response of the message is
+	 * received. */
+	update_last_tx_timestamp(now);
+	if (free_req) {
+		free_message(req);
+	}
+
+	return 0;
 }
 
 static int process_incoming_messages(const time_t *now)
 {
 	struct ocpp_message received = { 0, };
-	struct message *req = NULL;
 
 	ocpp_unlock();
 	int err = ocpp_recv(&received);
@@ -461,15 +526,7 @@ static int process_incoming_messages(const time_t *now)
 		break;
 	case OCPP_MSG_ROLE_CALLRESULT: /* fall through */
 	case OCPP_MSG_ROLE_CALLERROR:
-		if (!(req = find_msg_by_idstr(&m.tx.wait, received.id))) {
-			err = -ENOLINK;
-			OCPP_ERROR("No matching request for response %s",
-					ocpp_stringify_type(received.type));
-			break;
-		}
-		process_central_response(&received, req, now);
-		update_last_tx_timestamp(now); /* Note that tx timestamp is
-			updated when the response of the message is received. */
+		err = process_central_response(&received, now);
 		break;
 	default:
 		err = -EINVAL;

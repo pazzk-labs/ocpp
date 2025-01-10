@@ -33,7 +33,9 @@ int ocpp_send(const struct ocpp_message *msg) {
 
 int ocpp_recv(struct ocpp_message *msg)
 {
-	return mock().actualCall(__func__).withOutputParameter("msg", msg).returnIntValueOrDefault(0);
+	int rc = mock().actualCall(__func__).withOutputParameter("msg", msg).returnIntValueOrDefault(0);
+	memcpy(msg->id, sent.message_id, sizeof(msg->id));
+	return rc;
 }
 
 int ocpp_lock(void) {
@@ -71,6 +73,7 @@ static void on_ocpp_event(ocpp_event_t event_type,
 TEST_GROUP(Core) {
 	void setup(void) {
 		srand((unsigned int)clock());
+		mock().expectOneCall("time").andReturnValue(0);
 		ocpp_init(on_ocpp_event, NULL);
 	}
 	void teardown(void) {
@@ -89,6 +92,28 @@ TEST_GROUP(Core) {
 	void check_rx(ocpp_message_role_t role, ocpp_message_t type) {
 		LONGS_EQUAL(role, event.role);
 		LONGS_EQUAL(type, event.type);
+	}
+	void go_bootnoti_accepted(void) {
+		struct ocpp_message resp = {
+			.role = OCPP_MSG_ROLE_CALLRESULT,
+			.type = OCPP_MSG_BOOTNOTIFICATION,
+			.payload.fmt.response = &(const struct ocpp_BootNotification_conf) {
+				.interval = 10,
+				.status = OCPP_BOOT_STATUS_ACCEPTED,
+			},
+		};
+		ocpp_send_bootnotification(&(const struct ocpp_BootNotification) {
+			.chargePointModel = "Model",
+			.chargePointVendor = "Vendor",
+		});
+
+		mock().expectOneCall("ocpp_send").andReturnValue(0);
+		mock().expectOneCall("ocpp_recv")
+			.withOutputParameterReturning("msg", &resp, sizeof(resp))
+			.andReturnValue(0);
+		mock().expectOneCall("on_ocpp_event").withParameter("event_type", 2);
+		mock().expectOneCall("on_ocpp_event").withParameter("event_type", 0);
+		step(0);
 	}
 };
 
@@ -124,7 +149,16 @@ TEST(Core, step_ShouldDropMessage_WhenFailedSendingMoreThanRetries) {
 	step(OCPP_DEFAULT_TX_TIMEOUT_SEC*2);
 }
 
+TEST(Core, ShouldNeverSendHeartBeat_WhenBootNotificationNotAccepted) {
+	int interval;
+	ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
+	mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+	step(interval);
+}
+
 TEST(Core, step_ShouldSendHeartBeat_WhenNoMessageSentDuringHeartBeatInterval) {
+	go_bootnoti_accepted();
+
 	int interval;
 	ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
 	mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
