@@ -30,6 +30,10 @@ int ocpp_send(const struct ocpp_message *msg);
  * This function receives an OCPP message from the server. The received message
  * is stored in the provided ocpp_message structure.
  *
+ * If the function returns -ENOTSUP, it sends an error response message. In the
+ * case of an ENOTSUP error, the last received message time is recorded. For
+ * other errors, the time is not recorded.
+ *
  * @param[out] msg A pointer to the ocpp_message structure where the received
  *             message will be stored.
  * @return An integer indicating the status of the operation. A return value

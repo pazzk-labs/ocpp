@@ -231,6 +231,24 @@ static struct message *find_msg_by_idstr(struct list *list_head,
 	return NULL;
 }
 
+static int push_message(const char *id, ocpp_message_t type,
+		const void *data, size_t datasize,
+		time_t timer, list_add_func_t f, bool err)
+{
+	struct message *msg = new_message(id, type, err);
+
+	if (!msg) {
+		return -ENOMEM;
+	}
+
+	msg->body.payload.fmt.request = data;
+	msg->body.payload.size = datasize;
+	msg->expiry = timer;
+	(*f)(msg);
+
+	return 0;
+}
+
 static bool is_transaction_related(const struct message *msg)
 {
 	switch (msg->body.type) {
@@ -535,32 +553,17 @@ static int process_incoming_messages(const time_t *now)
 	}
 
 out:
-	if (err != -ENOMSG) {
-		if (err >= 0) {
-			update_last_rx_timestamp(now);
+	if (err >= 0 || err == -ENOTSUP) {
+		update_last_rx_timestamp(now);
+		if (err == -ENOTSUP) {
+			push_message(received.id, received.type, NULL, 0,
+				0, put_msg_ready, true);
+		} else {
+			dispatch_event(err, &received);
 		}
-		dispatch_event(err, &received);
 	}
 
 	return err;
-}
-
-static int push_message(const char *id, ocpp_message_t type,
-		const void *data, size_t datasize,
-		time_t timer, list_add_func_t f, bool err)
-{
-	struct message *msg = new_message(id, type, err);
-
-	if (!msg) {
-		return -ENOMEM;
-	}
-
-	msg->body.payload.fmt.request = data;
-	msg->body.payload.size = datasize;
-	msg->expiry = timer;
-	(*f)(msg);
-
-	return 0;
 }
 
 static int remove_oldest(void)
