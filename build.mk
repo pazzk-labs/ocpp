@@ -7,5 +7,6 @@ endif
 OCPP_SRCS := \
 	$(ocpp-basedir)src/ocpp.c \
 	$(ocpp-basedir)src/core/configuration.c \
+	$(ocpp-basedir)src/stringify.c \
 
 OCPP_INCS := $(ocpp-basedir)include
