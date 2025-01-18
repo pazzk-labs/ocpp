@@ -380,19 +380,19 @@ typedef enum {
 } ocpp_log_t;
 
 struct ocpp_KeyValue {
-	char key[50+1];
+	char key[OCPP_CiString50];
 	bool readonly;
-	char value[500+1];
+	char value[OCPP_CiString500];
 };
 
 struct ocpp_idTagInfo {
 	time_t expiryDate;
-	char parentIdTag[20+1];
+	char parentIdTag[OCPP_CiString20];
 	ocpp_auth_status_t status;
 };
 
 struct ocpp_AuthorizationData {
-	char idTag[20+1];
+	char idTag[OCPP_CiString20];
 	struct ocpp_idTagInfo idTagInfo;
 };
 

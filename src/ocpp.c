@@ -233,7 +233,8 @@ static struct message *find_msg_by_idstr(struct list *list_head,
 
 static int push_message(const char *id, ocpp_message_t type,
 		const void *data, size_t datasize,
-		time_t timer, list_add_func_t f, bool err)
+		time_t timer, list_add_func_t f, bool err,
+		struct ocpp_message **created)
 {
 	struct message *msg = new_message(id, type, err);
 
@@ -245,6 +246,10 @@ static int push_message(const char *id, ocpp_message_t type,
 	msg->body.payload.size = datasize;
 	msg->expiry = timer;
 	(*f)(msg);
+
+	if (created) {
+		*created = &msg->body;
+	}
 
 	return 0;
 }
@@ -556,7 +561,7 @@ static int process_incoming_messages(const time_t *now)
 
 	if (err == -ENOTSUP && received.role == OCPP_MSG_ROLE_CALL) {
 		push_message(received.id, received.type, NULL, 0, 0,
-				put_msg_ready, true);
+				put_msg_ready, true, NULL);
 	} else {
 		dispatch_event(err, &received);
 	}
@@ -688,19 +693,32 @@ size_t ocpp_count_pending_requests(void)
 }
 
 int ocpp_push_request(ocpp_message_t type, const void *data, size_t datasize,
-		bool force)
+		struct ocpp_message **created)
 {
 	int rc = 0;
 
 	ocpp_lock();
 	{
 		rc = push_message(NULL, type, data, datasize, 0,
-				put_msg_ready, 0);
+				put_msg_ready, 0, created);
+	}
+	ocpp_unlock();
 
-		if (rc != 0 && force) {
+	return rc;
+}
+
+int ocpp_push_request_force(ocpp_message_t type, const void *data,
+		size_t datasize, struct ocpp_message **created)
+{
+	int rc = 0;
+
+	ocpp_lock();
+	{
+		if ((rc = push_message(NULL, type, data, datasize, 0,
+				put_msg_ready, 0, created)) != 0) {
 			remove_oldest();
 			rc = push_message(NULL, type, data, datasize, 0,
-					put_msg_ready, 0);
+					put_msg_ready, 0, created);
 		}
 	}
 	ocpp_unlock();
@@ -721,7 +739,7 @@ int ocpp_push_request_defer(ocpp_message_t type,
 	ocpp_lock();
 	{
 		rc = push_message(NULL, type, data, datasize,
-				time(NULL) + (time_t)timer_sec, f, 0);
+				time(NULL) + (time_t)timer_sec, f, 0, NULL);
 	}
 	ocpp_unlock();
 
@@ -736,7 +754,7 @@ int ocpp_push_response(const struct ocpp_message *req,
 	ocpp_lock();
 	{
 		rc = push_message(req->id, req->type, data, datasize,
-				0, put_msg_ready, err);
+				0, put_msg_ready, err, NULL);
 	}
 	ocpp_unlock();
 

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "ocpp/type.h"
+#include "ocpp/stringify.h"
 
 const char *ocpp_stringify_fw_update_status(ocpp_comm_status_t status) {
 	const char *tbl[] = {
@@ -62,4 +62,104 @@ const char *ocpp_stringify_status(ocpp_status_t status)
 	};
 
 	return tbl[status];
+}
+
+const char *ocpp_stringify_availability_status(ocpp_availability_status_t status)
+{
+	const char *tbl[] = {
+		[OCPP_AVAILABILITY_STATUS_ACCEPTED] = "Accepted",
+		[OCPP_AVAILABILITY_STATUS_REJECTED] = "Rejected",
+		[OCPP_AVAILABILITY_STATUS_SCHEDULED] = "Scheduled",
+	};
+
+	return tbl[status];
+}
+
+const char *ocpp_stringify_config_status(ocpp_config_status_t status)
+{
+	const char *tbl[] = {
+		[OCPP_CONFIG_STATUS_ACCEPTED] = "Accepted",
+		[OCPP_CONFIG_STATUS_REJECTED] = "Rejected",
+		[OCPP_CONFIG_STATUS_REBOOT_REQUIRED] = "RebootRequired",
+		[OCPP_CONFIG_STATUS_NOT_SUPPORTED] = "NotSupported",
+	};
+
+	return tbl[status];
+}
+
+const char *ocpp_stringify_data_status(ocpp_data_status_t status)
+{
+	const char *tbl[] = {
+		[OCPP_DATA_STATUS_ACCEPTED] = "Accepted",
+		[OCPP_DATA_STATUS_REJECTED] = "Rejected",
+		[OCPP_DATA_STATUS_UNKNOWN_VENDOR_ID] = "UnknownVendorId",
+		[OCPP_DATA_STATUS_UNKNOWN_MESSAGE_ID] = "UnknownMessageId",
+	};
+
+	return tbl[status];
+}
+
+const char *ocpp_stringify_profile_status(ocpp_profile_status_t status)
+{
+	const char *tbl[] = {
+		[OCPP_PROFILE_STATUS_ACCEPTED] = "Accepted",
+		[OCPP_PROFILE_STATUS_REJECTED] = "Rejected",
+		[OCPP_PROFILE_STATUS_NOT_SUPPORTED] = "NotSupported",
+		[OCPP_PROFILE_STATUS_UNKNOWN] = "Unknown",
+	};
+
+	return tbl[status];
+}
+
+const char *ocpp_stringify_remote_status(ocpp_remote_status_t status)
+{
+	const char *tbl[] = {
+		[OCPP_REMOTE_STATUS_ACCEPTED] = "Accepted",
+		[OCPP_REMOTE_STATUS_REJECTED] = "Rejected",
+	};
+
+	return tbl[status];
+}
+
+const char *ocpp_stringify_reservation_status(ocpp_reservation_status_t status)
+{
+	const char *tbl[] = {
+		[OCPP_RESERVE_STATUS_ACCEPTED] = "Accepted",
+		[OCPP_RESERVE_STATUS_FAULTED] = "Faulted",
+		[OCPP_RESERVE_STATUS_OCCUPIED] = "Occupied",
+		[OCPP_RESERVE_STATUS_REJECTED] = "Rejected",
+		[OCPP_RESERVE_STATUS_UNAVAILABLE] = "Unavailable",
+	};
+
+	return tbl[status];
+}
+
+const char *ocpp_stringify_trigger_status(ocpp_trigger_status_t status)
+{
+	const char *tbl[] = {
+		[OCPP_TRIGGER_STATUS_ACCEPTED] = "Accepted",
+		[OCPP_TRIGGER_STATUS_REJECTED] = "Rejected",
+		[OCPP_TRIGGER_STATUS_NOT_IMPLEMENTED] = "NotImplemented",
+	};
+
+	return tbl[status];
+}
+
+const char *ocpp_stringify_stop_reason(ocpp_stop_reason_t reason)
+{
+	const char *tbl[] = {
+		[OCPP_STOP_REASON_LOCAL] = "Local",
+		[OCPP_STOP_REASON_DEAUTHORIZED] = "DeAuthorized",
+		[OCPP_STOP_REASON_EMERGENCY_STOP] = "EmergencyStop",
+		[OCPP_STOP_REASON_EV_DISCONNECTED] = "EVDisconnected",
+		[OCPP_STOP_REASON_HARD_RESET] = "HardReset",
+		[OCPP_STOP_REASON_OTHER] = "Other",
+		[OCPP_STOP_REASON_POWER_LOSS] = "PowerLoss",
+		[OCPP_STOP_REASON_REBOOT] = "Reboot",
+		[OCPP_STOP_REASON_REMOTE] = "Remote",
+		[OCPP_STOP_REASON_SOFT_RESET] = "SoftReset",
+		[OCPP_STOP_REASON_UNLOCK_COMMAND] = "UnlockCommand",
+	};
+
+	return tbl[reason];
 }
