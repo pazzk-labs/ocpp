@@ -215,12 +215,12 @@ TEST(Core, ShouldSendStartTransaction_WhenQueueIsFull) {
 	struct ocpp_DataTransfer msg[8];
 	struct ocpp_StartTransaction start;
 	for (int i = 0; i < 8; i++) {
-		LONGS_EQUAL(0, ocpp_push_request(OCPP_MSG_DATA_TRANSFER, &msg[i], sizeof(msg[i]), false));
+		LONGS_EQUAL(0, ocpp_push_request(OCPP_MSG_DATA_TRANSFER, &msg[i], sizeof(msg[i]), NULL));
 	}
 
-	LONGS_EQUAL(-ENOMEM, ocpp_push_request(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), false));
+	LONGS_EQUAL(-ENOMEM, ocpp_push_request(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), NULL));
 	mock().expectOneCall("on_ocpp_event").withParameter("event_type", OCPP_EVENT_MESSAGE_FREE);
-	LONGS_EQUAL(0, ocpp_push_request(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), true));
+	LONGS_EQUAL(0, ocpp_push_request_force(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), NULL));
 
 	mock().expectNCalls(6, "on_ocpp_event").withParameter("event_type", OCPP_EVENT_MESSAGE_FREE);
 	for (int i = 0; i < 7*OCPP_DEFAULT_TX_RETRIES; i++) {
@@ -246,13 +246,13 @@ TEST(Core, ShouldReturnNOMEM_WhenQueueIsFullWithTransactionRelatedMessages) {
 	struct ocpp_DataTransfer data;
 	struct ocpp_StartTransaction start;
 	for (int i = 0; i < 8; i++) {
-		LONGS_EQUAL(0, ocpp_push_request(OCPP_MSG_DATA_TRANSFER, &data, sizeof(data), false));
+		LONGS_EQUAL(0, ocpp_push_request(OCPP_MSG_DATA_TRANSFER, &data, sizeof(data), NULL));
 	}
 	mock().expectNCalls(8, "on_ocpp_event").withParameter("event_type", OCPP_EVENT_MESSAGE_FREE);
 	for (int i = 0; i < 8; i++) {
-		LONGS_EQUAL(0, ocpp_push_request(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), true));
+		LONGS_EQUAL(0, ocpp_push_request_force(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), NULL));
 	}
-	LONGS_EQUAL(-ENOMEM, ocpp_push_request(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), true));
+	LONGS_EQUAL(-ENOMEM, ocpp_push_request_force(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), NULL));
 }
 
 TEST(Core, ShouldDropTransactionRelatedMessages_WhenServerReponsesWithErrorMoreThanMaxAttemptsConfigured) {
@@ -268,7 +268,7 @@ TEST(Core, ShouldDropTransactionRelatedMessages_WhenServerReponsesWithErrorMoreT
 		.type = OCPP_MSG_START_TRANSACTION,
 	};
 
-	ocpp_push_request(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), true);
+	ocpp_push_request_force(OCPP_MSG_START_TRANSACTION, &start, sizeof(start), NULL);
 	mock().expectOneCall("ocpp_send").andReturnValue(0);
 	mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
 	step(0);
@@ -295,7 +295,7 @@ TEST(Core, ShouldSendTransactionRelatedmessagesIndefinitely_WhenTransportErrors)
 TEST(Core, ShouldDropNonTransactionRelatedMessagesAfterTimeout_WhenNoResponseReceived) {
 	ocpp_push_request(OCPP_MSG_DATA_TRANSFER, &(const struct ocpp_DataTransfer) {
 		.vendorId = "VendorID",
-	}, sizeof(struct ocpp_DataTransfer), false);
+	}, sizeof(struct ocpp_DataTransfer), NULL);
 
 	int i = 0;
 	for (; i < OCPP_DEFAULT_TX_RETRIES; i++) {
@@ -312,7 +312,7 @@ TEST(Core, ShouldDropNonTransactionRelatedMessagesAfterTimeout_WhenNoResponseRec
 TEST(Core, ShouldDropNonTransactionRelatedMessagesAfterTimeout_WhenTransportErrors) {
 	ocpp_push_request(OCPP_MSG_DATA_TRANSFER, &(const struct ocpp_DataTransfer) {
 		.vendorId = "VendorID",
-	}, sizeof(struct ocpp_DataTransfer), false);
+	}, sizeof(struct ocpp_DataTransfer), NULL);
 
 	int i = 0;
 	for (; i < OCPP_DEFAULT_TX_RETRIES-1; i++) {
