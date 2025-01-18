@@ -327,7 +327,7 @@ TEST(Core, ShouldDropNonTransactionRelatedMessagesAfterTimeout_WhenTransportErro
 	step(i*OCPP_DEFAULT_TX_TIMEOUT_SEC);
 }
 
-TEST(Core, t) {
+TEST(Core, ShouldSendBootNotification_WhenRequested) {
 	ocpp_send_bootnotification(&(const struct ocpp_BootNotification) {
 		.chargePointModel = "Model",
 		.chargePointVendor = "Vendor",
@@ -337,4 +337,25 @@ TEST(Core, t) {
 	mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
 	step(0);
 	check_tx(OCPP_MSG_ROLE_CALL, OCPP_MSG_BOOTNOTIFICATION);
+}
+
+TEST(Core, ShouldReturnNumberOfPendingMessages_WhenRequested) {
+	ocpp_push_request(OCPP_MSG_STATUS_NOTIFICATION, NULL, 0, NULL);
+	LONGS_EQUAL(1, ocpp_count_pending_requests());
+}
+
+TEST(Core, ShouldReturnTypeString_WhenValidTypeGiven) {
+	STRCMP_EQUAL("BootNotification", ocpp_stringify_type(OCPP_MSG_BOOTNOTIFICATION));
+}
+
+TEST(Core, ShouldReturnType_WhenValidTypeStringGiven) {
+	LONGS_EQUAL(OCPP_MSG_BOOTNOTIFICATION, ocpp_get_type_from_string("BootNotification"));
+}
+
+TEST(Core, ShouldReturnMSG_MAX_WhenInvalidTypeStringGiven) {
+	LONGS_EQUAL(OCPP_MSG_MAX, ocpp_get_type_from_string("UnknownType"));
+}
+
+TEST(Core, ShouldReturnMSG_MAX_WhenInvalidTypeIdGiven) {
+	LONGS_EQUAL(OCPP_MSG_MAX, ocpp_get_type_from_idstr("UnknownId"));
 }

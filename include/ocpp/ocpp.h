@@ -164,32 +164,24 @@ int ocpp_push_response(const struct ocpp_message *req,
 size_t ocpp_count_pending_requests(void);
 
 /**
- * @brief Save the current OCPP context as a snapshot.
+ * @brief Converts an OCPP message type to its string representation.
  *
- * @param[out] buf buffer for the snapshot to be saved
- * @param[in] bufsize size of the buffer
+ * @param[in] msgtype The OCPP message type to be converted.
  *
- * @note A header is included in the snapshot for validation upon restore,
- *       which is processed internally.
- *
- * @return 0 for success, otherwise an error.
+ * @return A constant character pointer to the string representation of the
+ * message type.
  */
-int ocpp_save_snapshot(void *buf, size_t bufsize);
-/**
- * @brief Restore the OCPP context from a snapshot.
- *
- * @param[in] snapshot snapshot to be loaded
- *
- * @note No need to call `ocpp_init()` when this function is used.
- *
- * @return 0 for success, otherwise an error.
- */
-int ocpp_restore_snapshot(const void *snapshot);
-size_t ocpp_compute_snapshot_size(void);
-
 const char *ocpp_stringify_type(ocpp_message_t msgtype);
 
+/**
+ * @brief Get message type from message type string
+ *
+ * @param[in] typestr The string representation of the OCPP message type.
+ *
+ * @return Type of message. `OCPP_MSG_MAX` if no matching found.
+ */
 ocpp_message_t ocpp_get_type_from_string(const char *typestr);
+
 /**
  * @brief Get message type from ID string
  *
