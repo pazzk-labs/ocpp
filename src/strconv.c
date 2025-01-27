@@ -99,7 +99,8 @@ const char *ocpp_stringify_measurand(char *buf, const size_t bufsize,
 	return len? buf : NULL;
 }
 
-const char *ocpp_stringify_comm_status(ocpp_comm_status_t status) {
+const char *ocpp_stringify_comm_status(ocpp_comm_status_t status)
+{
 	const char *tbl[] = {
 		[OCPP_COMM_IDLE] = "Idle",
 		[OCPP_COMM_UPLOADED] = "Uploaded",
@@ -325,4 +326,46 @@ ocpp_boot_status_t ocpp_get_boot_status_from_string(const char *str)
 	} else {
 		return OCPP_BOOT_STATUS_UNKNOWN;
 	}
+}
+
+const char *ocpp_stringify_context(ocpp_reading_context_t ctx)
+{
+	const char *tbl[] = {
+		[OCPP_READ_CTX_UNKNOWN] = "Unknown",
+		[OCPP_READ_CTX_INT_BEGIN] = "Interruption.Begin",
+		[OCPP_READ_CTX_INT_END] = "Interruption.End",
+		[OCPP_READ_CTX_OTHER] = "Other",
+		[OCPP_READ_CTX_SAMPLE_CLOCK] = "Sample.Clock",
+		[OCPP_READ_CTX_SAMPLE_PERIODIC] = "Sample.Periodic",
+		[OCPP_READ_CTX_TRANSACTION_BEGIN] = "Transaction.Begin",
+		[OCPP_READ_CTX_TRANSACTION_END] = "Transaction.End",
+		[OCPP_READ_CTX_TRIGGER] = "Trigger",
+	};
+
+	return tbl[ctx];
+}
+
+const char *ocpp_stringify_unit(ocpp_measure_unit_t unit)
+{
+	const char *tbl[] = {
+		[OCPP_UNIT_UNKNOWN] = "Unknown",
+		[OCPP_UNIT_WH] = "Wh",
+		[OCPP_UNIT_KWH] = "kWh",
+		[OCPP_UNIT_VARH] = "varh",
+		[OCPP_UNIT_KVARH] = "kvarh",
+		[OCPP_UNIT_W] = "W",
+		[OCPP_UNIT_KW] = "kW",
+		[OCPP_UNIT_VA] = "VA",
+		[OCPP_UNIT_KVA] = "kVA",
+		[OCPP_UNIT_VAR] = "var",
+		[OCPP_UNIT_KVAR] = "kvar",
+		[OCPP_UNIT_A] = "A",
+		[OCPP_UNIT_V] = "V",
+		[OCPP_UNIT_CELSIUS] = "Celsius",
+		[OCPP_UNIT_FAHRENHEIT] = "Fahrenheit",
+		[OCPP_UNIT_K] = "K",
+		[OCPP_UNIT_PERCENT] = "Percent",
+	};
+
+	return tbl[unit];
 }

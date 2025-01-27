@@ -80,6 +80,9 @@ ocpp_measurand_t ocpp_get_measurand_from_string(const char *str,
 ocpp_auth_status_t ocpp_get_auth_status_from_string(const char *str);
 ocpp_boot_status_t ocpp_get_boot_status_from_string(const char *str);
 
+const char *ocpp_stringify_context(ocpp_reading_context_t ctx);
+const char *ocpp_stringify_unit(ocpp_measure_unit_t unit);
+
 #if defined(__cplusplus)
 }
 #endif
