@@ -282,8 +282,7 @@ const char *ocpp_stringify_unit(ocpp_measure_unit_t unit)
 	return tbl[unit];
 }
 
-const char *ocpp_stringify_measurand(char *buf, size_t bufsize,
-		ocpp_measurand_t measurand)
+const char *ocpp_stringify_measurand(ocpp_measurand_t measurand)
 {
 	const char *tbl[] = {
 		"Current.Export",

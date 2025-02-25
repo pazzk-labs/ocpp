@@ -46,8 +46,7 @@ ocpp_boot_status_t ocpp_get_boot_status_from_string(const char *str);
 
 const char *ocpp_stringify_context(ocpp_reading_context_t ctx);
 const char *ocpp_stringify_unit(ocpp_measure_unit_t unit);
-const char *ocpp_stringify_measurand(char *buf, size_t bufsize,
-		ocpp_measurand_t measurand);
+const char *ocpp_stringify_measurand(ocpp_measurand_t measurand);
 
 #if defined(__cplusplus)
 }

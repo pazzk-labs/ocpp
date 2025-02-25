@@ -81,3 +81,8 @@ TEST(strconv, ShouldReturnStopReasonString_WhenStopReasonGiven) {
 	const char *y = ocpp_stringify_stop_reason(OCPP_STOP_REASON_EMERGENCY_STOP);
 	STRCMP_EQUAL("EmergencyStop", y);
 }
+
+TEST(strconv, ShouldReturnMeasurandString_WhenMeasurandGiven) {
+	const char *y = ocpp_stringify_measurand(OCPP_MEASURAND_FREQUENCY);
+	STRCMP_EQUAL("Frequency", y);
+}
