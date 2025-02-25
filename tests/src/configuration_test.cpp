@@ -124,3 +124,31 @@ TEST(Configuration, get_keystr_ShouldReturnKeyString_WhenKnownKeyGiven) {
 TEST(Configuration, get_keystr_ShouldReturnUnknownKeyString_WhenUnknownKeyGiven) {
 	STRCMP_EQUAL(NULL, ocpp_get_configuration_keystr_from_index(-1));
 }
+
+TEST(Configuration, ShouldReturnNull_WhenUnknownKeyGiven) {
+	char buf[32];
+	const char *y = ocpp_stringify_configuration_value("non-empty", buf, sizeof(buf));
+	STRCMP_EQUAL(NULL, y);
+}
+TEST(Configuration, ShouldReturnBooleanString_WhenBoolKeyGiven) {
+	char buf[32];
+	const char *y = ocpp_stringify_configuration_value("AllowOfflineTxForUnknownId", buf, sizeof(buf));
+	STRCMP_EQUAL("false", y);
+	y = ocpp_stringify_configuration_value("AuthorizeRemoteTxRequests", buf, sizeof(buf));
+	STRCMP_EQUAL("true", y);
+}
+TEST(Configuration, ShouldReturnIntString_WhenIntKeyGiven) {
+	char buf[32];
+	const char *y = ocpp_stringify_configuration_value("ConnectionTimeOut", buf, sizeof(buf));
+	STRCMP_EQUAL("180", y);
+}
+TEST(Configuration, ShouldReturnString_WhenStringKeyGiven) {
+	char buf[32];
+	const char *y = ocpp_stringify_configuration_value("CpoName", buf, sizeof(buf));
+	STRCMP_EQUAL("libmcu", y);
+}
+TEST(Configuration, ShouldReturnCSLString_WhenCSLKeyGiven) {
+	char buf[32];
+	const char *y = ocpp_stringify_configuration_value("MeterValuesAlignedData", buf, sizeof(buf));
+	STRCMP_EQUAL("Energy.Active.Import.Register", y);
+}

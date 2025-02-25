@@ -6,98 +6,10 @@
 
 #include "ocpp/strconv.h"
 #include <string.h>
-#include <stdio.h>
 
 #if !defined(ARRAY_SIZE)
 #define ARRAY_SIZE(x)		(sizeof(x) / sizeof((x)[0]))
 #endif
-
-static size_t addstr_if(const int mask, const int value, const char *str,
-		char *buf, const size_t bufsize, bool comma)
-{
-	int len = 0;
-
-	if (mask & value) {
-		len = snprintf(buf, bufsize, "%s%s", comma? "," : "", str);
-	}
-
-	return len > 0? (size_t)len : 0;
-}
-
-const char *ocpp_stringify_profile(char *buf, const size_t bufsize,
-		const ocpp_profile_t profile)
-{
-	size_t len = 0;
-
-	len += addstr_if((int)profile, OCPP_PROFILE_CORE,
-			"Core", buf, bufsize, false);
-	len += addstr_if((int)profile, OCPP_PROFILE_FW_MGMT,
-			"FirmwareManagement", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)profile, OCPP_PROFILE_LOCAL_AUTH,
-			"LocalAuthListManagement",
-			&buf[len], bufsize - len, !!len);
-	len += addstr_if((int)profile, OCPP_PROFILE_RESERVATION,
-			"Reservation", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)profile, OCPP_PROFILE_SMART_CHARGING,
-			"SmartCharging", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)profile, OCPP_PROFILE_REMOTE_TRIGGER,
-			"RemoteTrigger", &buf[len], bufsize - len, !!len);
-
-	return len? buf : NULL;
-}
-
-const char *ocpp_stringify_measurand(char *buf, const size_t bufsize,
-		const ocpp_measurand_t measurand)
-{
-	size_t len = 0;
-
-	len += addstr_if((int)measurand, OCPP_MEASURAND_CURRENT_EXPORT,
-			"Current.Export", buf, bufsize, false);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_CURRENT_IMPORT,
-			"Current.Import", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_CURRENT_OFFERED,
-			"Current.Offered", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_ENERGY_ACTIVE_EXPORT_REGISTER,
-			"Energy.Active.Export.Register", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_ENERGY_ACTIVE_IMPORT_REGISTER,
-			"Energy.Active.Import.Register", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_ENERGY_REACTIVE_EXPORT_REGISTER,
-			"Energy.Reactive.Export.Register", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_ENERGY_REACTIVE_IMPORT_REGISTER,
-			"Energy.Reactive.Import.Register", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_ENERGY_ACTIVE_EXPORT_INTERVAL,
-			"Energy.Active.Export.Interval", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_ENERGY_ACTIVE_IMPORT_INTERVAL,
-			"Energy.Active.Import.Interval", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_ENERGY_REACTIVE_EXPORT_INTERVAL,
-			"Energy.Reactive.Export.Interval", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_ENERGY_REACTIVE_IMPORT_INTERVAL,
-			"Energy.Reactive.Import.Interval", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_FREQUENCY,
-			"Frequency", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_POWER_ACTIVE_EXPORT,
-			"Power.Active.Export", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_POWER_ACTIVE_IMPORT,
-			"Power.Active.Import", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_POWER_FACTOR,
-			"Power.Factor", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_POWER_OFFERED,
-			"Power.Offered", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_POWER_REACTIVE_EXPORT,
-			"Power.Reactive.Export", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_POWER_REACTIVE_IMPORT,
-			"Power.Reactive.Import", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_RPM,
-			"RPM", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_SOC,
-			 "SoC", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_TEMPERATURE,
-			"Temperature", &buf[len], bufsize - len, !!len);
-	len += addstr_if((int)measurand, OCPP_MEASURAND_VOLTAGE,
-			"Voltage", &buf[len], bufsize - len, !!len);
-
-	return len? buf : NULL;
-}
 
 const char *ocpp_stringify_comm_status(ocpp_comm_status_t status)
 {

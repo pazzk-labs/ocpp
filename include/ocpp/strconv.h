@@ -13,42 +13,6 @@ extern "C" {
 
 #include "ocpp/type.h"
 
-/**
- * @brief Converts an ocpp_profile_t enum value to its string representation.
- *
- * This function takes an ocpp_profile_t enum value and converts it to a string
- * representation, storing the result in the provided buffer. The buffer size
- * should be sufficient to hold the resulting string. If the profile is not
- * valid, the function will return NULL.
- *
- * @param[out] buf The buffer to store the string representation.
- * @param[in] bufsize The size of the buffer.
- * @param[in] profile The ocpp_profile_t enum value to be converted.
- *
- * @return A pointer to the buffer containing the string representation, or NULL
- *         if the profile is not valid.
- */
-const char *ocpp_stringify_profile(char *buf, const size_t bufsize,
-		const ocpp_profile_t profile);
-
-/**
- * @brief Converts an ocpp_measurand_t enum value to its string representation.
- *
- * This function takes an ocpp_measurand_t enum value and converts it to a
- * string representation, storing the result in the provided buffer. The buffer
- * size should be sufficient to hold the resulting string. If the measurand is
- * not valid, the function will return NULL.
- *
- * @param[out] buf The buffer to store the string representation.
- * @param[in] bufsize The size of the buffer.
- * @param[in] measurand The ocpp_measurand_t enum value to be converted.
- *
- * @return A pointer to the buffer containing the string representation, or NULL
- *         if the measurand is not valid.
- */
-const char *ocpp_stringify_measurand(char *buf, const size_t bufsize,
-		const ocpp_measurand_t measurand);
-
 const char *ocpp_stringify_comm_status(ocpp_comm_status_t status);
 const char *ocpp_stringify_error(ocpp_error_t err);
 const char *ocpp_stringify_status(ocpp_status_t status);

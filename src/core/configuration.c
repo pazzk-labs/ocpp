@@ -8,6 +8,7 @@
 #include "ocpp/overrides.h"
 #include <string.h>
 #include <errno.h>
+#include <stdio.h>
 
 #if !defined(OCPP_LIBRARY_VERSION)
 #define OCPP_LIBRARY_VERSION		0
@@ -19,6 +20,10 @@
 
 #if !defined(MIN)
 #define MIN(a, b)			(((a) > (b))? (b) : (a))
+#endif
+
+#if !defined(ARRAY_SIZE)
+#define ARRAY_SIZE(x)			(sizeof(x) / sizeof((x)[0]))
 #endif
 
 #define CONF_SIZE(x)			(x)
@@ -215,6 +220,193 @@ static int get_configuration(configuration_t key,
 			MIN(get_value_cap(key), bufsize));
 
 	return 0;
+}
+
+static size_t addstr_if(const int mask, const int value, const char *str,
+		char *buf, const size_t bufsize, bool comma)
+{
+	int len = 0;
+
+	if (mask & value) {
+		len = snprintf(buf, bufsize, "%s%s", comma? "," : "", str);
+	}
+
+	return len > 0? (size_t)len : 0;
+}
+
+static void stringify_connector_phase_rotation(const int value,
+		char *buf, size_t bufsize)
+{
+	if (value < 0 || value > OCPP_PHASE_ROTATION_TSR) {
+		return;
+	}
+
+	const char *str[] = {
+		[OCPP_PHASE_ROTATION_NOT_APPLICABLE] = "NotApplicable",
+		[OCPP_PHASE_ROTATION_UNKNOWN] = "Unknown",
+		[OCPP_PHASE_ROTATION_RST] = "RST",
+		[OCPP_PHASE_ROTATION_RTS] = "RTS",
+		[OCPP_PHASE_ROTATION_SRT] = "SRT",
+		[OCPP_PHASE_ROTATION_STR] = "STR",
+		[OCPP_PHASE_ROTATION_TRS] = "TRS",
+		[OCPP_PHASE_ROTATION_TSR] = "TSR",
+	};
+
+	snprintf(buf, bufsize, "%s", str[value]);
+}
+
+
+static void stringify_meter_data(const int value, char *buf, size_t bufsize)
+{
+	size_t len = addstr_if(value, OCPP_MEASURAND_CURRENT_EXPORT,
+			"Current.Export", buf, bufsize, false);
+	len += addstr_if(value, OCPP_MEASURAND_CURRENT_IMPORT,
+			"Current.Import", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_CURRENT_OFFERED,
+			"Current.Offered", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_ENERGY_ACTIVE_EXPORT_REGISTER,
+			"Energy.Active.Export.Register",
+			&buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_ENERGY_ACTIVE_IMPORT_REGISTER,
+			"Energy.Active.Import.Register",
+			&buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_ENERGY_REACTIVE_EXPORT_REGISTER,
+			"Energy.Reactive.Export.Register",
+			&buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_ENERGY_REACTIVE_IMPORT_REGISTER,
+			"Energy.Reactive.Import.Register",
+			&buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_ENERGY_ACTIVE_EXPORT_INTERVAL,
+			"Energy.Active.Export.Interval",
+			&buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_ENERGY_ACTIVE_IMPORT_INTERVAL,
+			"Energy.Active.Import.Interval",
+			&buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_ENERGY_REACTIVE_EXPORT_INTERVAL,
+			"Energy.Reactive.Export.Interval",
+			&buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_ENERGY_REACTIVE_IMPORT_INTERVAL,
+			"Energy.Reactive.Import.Interval",
+			&buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_FREQUENCY,
+			"Frequency", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_POWER_ACTIVE_EXPORT,
+			"Power.Active.Export", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_POWER_ACTIVE_IMPORT,
+			"Power.Active.Import", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_POWER_FACTOR,
+			"Power.Factor", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_POWER_OFFERED,
+			"Power.Offered", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_POWER_REACTIVE_EXPORT,
+			"Power.Reactive.Export",
+			&buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_POWER_REACTIVE_IMPORT,
+			"Power.Reactive.Import",
+			&buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_RPM,
+			"RPM", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_SOC,
+			"SoC", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_TEMPERATURE,
+			"Temperature", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_MEASURAND_VOLTAGE,
+			"Voltage", &buf[len], bufsize - len, !!len);
+}
+
+static void stringify_profile(const int value, char *buf, size_t bufsize)
+{
+	size_t len = addstr_if(value, OCPP_PROFILE_CORE,
+			"Core", buf, bufsize, false);
+	len += addstr_if(value, OCPP_PROFILE_FW_MGMT,
+			"FirmwareManagement", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_PROFILE_LOCAL_AUTH,
+			"LocalAuthListManagement",
+			&buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_PROFILE_RESERVATION,
+			"Reservation", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_PROFILE_SMART_CHARGING,
+			"SmartCharging", &buf[len], bufsize - len, !!len);
+	len += addstr_if(value, OCPP_PROFILE_REMOTE_TRIGGER,
+			"RemoteTrigger", &buf[len], bufsize - len, !!len);
+}
+
+static void stringify_charging_rate_unit(const int value,
+		char *buf, size_t bufsize)
+{
+	size_t len = addstr_if(value, OCPP_CHARGING_UNIT_WATT,
+			"Power", buf, bufsize, false);
+	len += addstr_if(value, OCPP_CHARGING_UNIT_AMPERE,
+			"Current", &buf[len], bufsize - len, !!len);
+}
+
+static void stringify_csl(const configuration_t key,
+		int value, char *buf, size_t bufsize)
+{
+	const struct {
+		const configuration_t key;
+		void (*fn)(const int value, char *buf, size_t bufsize);
+	} csl_handler[] = {
+		{ ConnectorPhaseRotation, stringify_connector_phase_rotation },
+		{ MeterValuesAlignedData, stringify_meter_data },
+		{ MeterValuesSampledData, stringify_meter_data },
+		{ StopTxnAlignedData, stringify_meter_data },
+		{ StopTxnSampledData, stringify_meter_data },
+		{ SupportedFeatureProfiles, stringify_profile },
+		{ ChargingScheduleAllowedChargingRateUnit,
+			stringify_charging_rate_unit },
+	};
+
+	for (size_t i = 0; i < ARRAY_SIZE(csl_handler); i++) {
+		if (key == csl_handler[i].key) {
+			csl_handler[i].fn(value, buf, bufsize);
+			break;
+		}
+	}
+}
+
+const char *ocpp_stringify_configuration_value(const char *keystr,
+		char *buf, size_t bufsize)
+{
+	const configuration_t key = get_key_from_keystr(keystr);
+
+	if (key >= CONFIGURATION_MAX || !buf || bufsize == 0) {
+		return NULL;
+	}
+
+	const ocpp_configuration_data_t value_type = get_value_type(key);
+	const size_t value_size = get_value_cap(key);
+	uint8_t value[value_size];
+	bool readonly;
+	int ival;
+
+	buf[0] = '\0';
+
+	ocpp_configuration_lock();
+	get_configuration(key, value, value_size, &readonly);
+	ocpp_configuration_unlock();
+
+	switch (value_type) {
+	case OCPP_CONF_TYPE_STR:
+		strncpy(buf, (const char *)value, bufsize);
+		break;
+	case OCPP_CONF_TYPE_BOOL:
+		snprintf(buf, bufsize, "%s",
+				*(const bool *)value? "true" : "false");
+		break;
+	case OCPP_CONF_TYPE_INT:
+		memcpy(&ival, value, sizeof(ival));
+		snprintf(buf, bufsize, "%d", ival);
+		break;
+	case OCPP_CONF_TYPE_CSL:
+		memcpy(&ival, value, sizeof(ival));
+		stringify_csl(key, ival, buf, bufsize);
+		break;
+	default:
+		return NULL;
+	}
+
+	return buf;
 }
 
 bool ocpp_has_configuration(const char * const keystr)

@@ -162,6 +162,7 @@ typedef enum {
 } ocpp_value_format_t;
 
 typedef enum {
+	OCPP_CHARGING_UNIT_NONE,
 	OCPP_CHARGING_UNIT_WATT,
 	OCPP_CHARGING_UNIT_AMPERE,
 } ocpp_charging_unit_t;
