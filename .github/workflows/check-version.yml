@@ -1,0 +1,48 @@
+name: Check version.h before release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          TAG_VERSION=$(git describe --tags --always)
+          TAG_VERSION=${TAG_VERSION#v}
+          echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+
+      - name: Extract version from version.h
+        id: get_header_version
+        run: |
+          HEADER_VERSION_STRING=$(grep -oP '(?<=#define OCPP_VERSION_STRING ")[^"]+' version.h)
+          HEADER_VERSION_MAJOR=$(grep -oP '(?<=#define OCPP_VERSION_MAJOR )\d+' version.h)
+          HEADER_VERSION_MINOR=$(grep -oP '(?<=#define OCPP_VERSION_MINOR )\d+' version.h)
+          HEADER_VERSION_BUILD=$(grep -oP '(?<=#define OCPP_VERSION_BUILD )\d+' version.h)
+
+          HEADER_VERSION="$HEADER_VERSION_MAJOR.$HEADER_VERSION_MINOR.$HEADER_VERSION_BUILD"
+
+          echo "Extracted header version: $HEADER_VERSION"
+          echo "HEADER_VERSION=$HEADER_VERSION" >> $GITHUB_ENV
+
+      - name: Compare versions
+        run: |
+          if [ "$TAG_VERSION" != "$HEADER_VERSION" ]; then
+            echo "::error:: version.h ($HEADER_VERSION) does not match git tag ($TAG_VERSION)"
+            exit 1
+          fi
+          echo "✅ Version match! Proceeding with release."
+
+      - name: Build & Release
+        run: |
+          echo "Now releasing version $TAG_VERSION..."
