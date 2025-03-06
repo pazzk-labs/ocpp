@@ -18,8 +18,8 @@
 #define MIN(a, b)			(((a) > (b))? (b) : (a))
 #endif
 
-#if !defined(ARRAY_SIZE)
-#define ARRAY_SIZE(x)			(sizeof(x) / sizeof((x)[0]))
+#if !defined(ARRAY_COUNT)
+#define ARRAY_COUNT(x)			(sizeof(x) / sizeof((x)[0]))
 #endif
 
 #define CONF_SIZE(x)			(x)
@@ -353,7 +353,7 @@ static void stringify_csl(const configuration_t key,
 			stringify_charging_rate_unit },
 	};
 
-	for (size_t i = 0; i < ARRAY_SIZE(csl_handler); i++) {
+	for (size_t i = 0; i < ARRAY_COUNT(csl_handler); i++) {
 		if (key == csl_handler[i].key) {
 			csl_handler[i].fn(value, buf, bufsize);
 			break;

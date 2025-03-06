@@ -7,8 +7,8 @@
 #include "ocpp/strconv.h"
 #include <string.h>
 
-#if !defined(ARRAY_SIZE)
-#define ARRAY_SIZE(x)		(sizeof(x) / sizeof((x)[0]))
+#if !defined(ARRAY_COUNT)
+#define ARRAY_COUNT(x)		(sizeof(x) / sizeof((x)[0]))
 #endif
 
 const char *ocpp_stringify_comm_status(ocpp_comm_status_t status)
@@ -201,7 +201,7 @@ ocpp_measurand_t ocpp_get_measurand_from_string(const char *str,
 		{ "Voltage", OCPP_MEASURAND_VOLTAGE },
 	};
 
-	for (size_t i = 0; i < ARRAY_SIZE(supported); i++) {
+	for (size_t i = 0; i < ARRAY_COUNT(supported); i++) {
 		if (strncmp(str, supported[i].str, len) == 0) {
 			return supported[i].code;
 		}
