@@ -49,6 +49,7 @@ static struct {
 		struct list ready;
 		struct list wait;
 		struct list timer;
+		struct list dead;
 
 		time_t timestamp;
 	} tx;
@@ -100,6 +101,13 @@ static void put_msg_timer(struct message *msg)
 {
 	add_last_to_list(msg, &m.tx.timer);
 	OCPP_DEBUG("%s pushed to timer list",
+			ocpp_stringify_type(msg->body.type));
+}
+
+static void put_msg_dead(struct message *msg)
+{
+	add_first_to_list(msg, &m.tx.dead);
+	OCPP_DEBUG("%s pushed to dead list",
 			ocpp_stringify_type(msg->body.type));
 }
 
@@ -190,6 +198,16 @@ static void free_message(struct message *msg)
 {
 	dispatch_event(OCPP_EVENT_MESSAGE_FREE, &msg->body);
 	memset(msg, 0, sizeof(*msg));
+}
+
+static void clear_dead_messages(void)
+{
+	struct list *p, *n;
+
+	list_for_each_safe(p, n, &m.tx.dead) {
+		struct message *msg = container_of(p, struct message, link);
+		free_message(msg);
+	}
 }
 
 static struct message *new_message(const char *id,
@@ -498,7 +516,7 @@ static int process_central_response(const struct ocpp_message *received,
 		const time_t *now)
 {
 	struct message *req = find_msg_by_idstr(&m.tx.wait, received->id);
-	bool free_req = true;
+	bool done = true;
 
 	if (req == NULL) {
 		OCPP_ERROR("No matching request for response %s",
@@ -510,9 +528,9 @@ static int process_central_response(const struct ocpp_message *received,
 	OCPP_INFO("rx: %s.conf", ocpp_stringify_type(req->body.type));
 
 	if (received->role == OCPP_MSG_ROLE_CALLRESULT) {
-		free_req = process_central_response_result(received, req, now);
+		done = process_central_response_result(received, req, now);
 	} else if (received->role == OCPP_MSG_ROLE_CALLERROR) {
-		free_req = process_central_response_error(received, req, now);
+		done = process_central_response_error(received, req, now);
 	} else {
 		OCPP_ERROR("Invalid message role: %d", received->role);
 	}
@@ -520,8 +538,9 @@ static int process_central_response(const struct ocpp_message *received,
 	/* Note that tx timestamp is updated when the response of the message is
 	 * received. */
 	update_last_tx_timestamp(now);
-	if (free_req) {
-		free_message(req);
+
+	if (done) {
+		put_msg_dead(req);
 	}
 
 	return 0;
@@ -556,11 +575,14 @@ static int process_incoming_messages(const time_t *now)
 	update_last_rx_timestamp(now);
 
 	if (err == -ENOTSUP && received.role == OCPP_MSG_ROLE_CALL) {
+		/* Send CallError if the message is not supported. */
 		push_message(received.id, received.type, NULL, 0, 0,
 				put_msg_ready, true, NULL);
 	} else {
 		dispatch_event(err, &received);
 	}
+
+	clear_dead_messages();
 out:
 	return err;
 }
@@ -768,7 +790,8 @@ ocpp_get_message_by_id(const char id[OCPP_MESSAGE_ID_MAXLEN])
 
 		if ((p = find_msg_by_idstr(&m.tx.wait, id)) ||
 			(p = find_msg_by_idstr(&m.tx.ready, id)) ||
-			(p = find_msg_by_idstr(&m.tx.timer, id))) {
+			(p = find_msg_by_idstr(&m.tx.timer, id)) ||
+			(p = find_msg_by_idstr(&m.tx.dead, id))) {
 			msg = &p->body;
 		}
 	}
@@ -802,6 +825,7 @@ int ocpp_init(ocpp_event_callback_t cb, void *cb_ctx)
 	list_init(&m.tx.ready);
 	list_init(&m.tx.wait);
 	list_init(&m.tx.timer);
+	list_init(&m.tx.dead);
 
 	m.event_callback = cb;
 	m.event_callback_ctx = cb_ctx;
