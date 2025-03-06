@@ -51,6 +51,8 @@ struct ocpp_message {
 		} fmt;
 		size_t size;
 	} payload;
+
+	void *ctx;
 };
 
 /**
@@ -80,22 +82,22 @@ int ocpp_init(ocpp_event_callback_t cb, void *cb_ctx);
 int ocpp_step(void);
 
 /**
- * @brief Pushes an OCPP request message.
+ * @brief Pushes a new OCPP request message.
  *
- * This function creates and pushes an OCPP request message of the specified
- * type.
+ * This function pushes a new OCPP request message of the specified type with
+ * the given data. The user-defined context can be associated with the message
+ * for later retrieval.
  *
- * @param[in] type The type of the OCPP message to be pushed.
- * @param[in] data A pointer to the data to be included in the message.
- * @param[in] datasize The size of the data to be included in the message.
- * @param[out] created A pointer to a pointer to an ocpp_message structure
- *             where the created message will be stored.
+ * @param[in] type The type of the OCPP message.
+ * @param[in] data Pointer to the data to be included in the message.
+ * @param[in] datasize Size of the data in bytes.
+ * @param[in] ctx User-defined context to be associated with the message.
  *
  * @return Returns 0 if the request was successfully pushed, non-zero
  *         otherwise.
  */
-int ocpp_push_request(ocpp_message_t type, const void *data, size_t datasize,
-		struct ocpp_message **created);
+int ocpp_push_request(ocpp_message_t type,
+		const void *data, size_t datasize, void *ctx);
 
 /**
  * @brief Pushes an OCPP request message forcefully.
@@ -110,14 +112,13 @@ int ocpp_push_request(ocpp_message_t type, const void *data, size_t datasize,
  * @param[in] type The type of the OCPP message to be pushed.
  * @param[in] data A pointer to the data to be included in the message.
  * @param[in] datasize The size of the data to be included in the message.
- * @param[out] created A pointer to a pointer to an ocpp_message structure
- *             where the created message will be stored.
+ * @param[in] ctx User-defined context to be associated with the message.
  *
  * @return Returns 0 if the request was successfully pushed, non-zero
  *         otherwise.
  */
 int ocpp_push_request_force(ocpp_message_t type, const void *data,
-		size_t datasize, struct ocpp_message **created);
+		size_t datasize, void *ctx);
 
 /**
  * @brief Pushes a deferred OCPP request.
@@ -130,11 +131,12 @@ int ocpp_push_request_force(ocpp_message_t type, const void *data,
  * @param[in] datasize Size of the data in bytes.
  * @param[in] timer_sec The timer duration in seconds after which the request
  *            will be processed.
+ * @param[in] ctx User-defined context to be associated with the message.
  *
  * @return 0 on success, or a negative error code on failure.
  */
-int ocpp_push_request_defer(ocpp_message_t type,
-		const void *data, size_t datasize, uint32_t timer_sec);
+int ocpp_push_request_defer(ocpp_message_t type, const void *data,
+		size_t datasize, uint32_t timer_sec, void *ctx);
 
 /**
  * @brief Pushes an OCPP response.
@@ -147,11 +149,26 @@ int ocpp_push_request_defer(ocpp_message_t type,
  * @param[in] datasize Size of the data in bytes.
  * @param[in] err Boolean flag indicating if the response is an error (true) or
  *            not (false).
+ * @param[in] ctx User-defined context to be associated with the message.
  *
  * @return 0 on success, or a negative error code on failure.
  */
 int ocpp_push_response(const struct ocpp_message *req,
-		const void *data, size_t datasize, bool err);
+		const void *data, size_t datasize, bool err, void *ctx);
+
+/**
+ * @brief Retrieves an OCPP message by its ID.
+ *
+ * This function searches for and returns a pointer to the OCPP message
+ * that matches the given message ID.
+ *
+ * @param id The ID of the message to retrieve.
+ *
+ * @return struct ocpp_message* Pointer to the OCPP message if found, otherwise
+ *         NULL.
+ */
+struct ocpp_message *
+ocpp_get_message_by_id(const char id[OCPP_MESSAGE_ID_MAXLEN]);
 
 /**
  * @brief Counts the number of pending OCPP requests.

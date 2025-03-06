@@ -45,7 +45,7 @@ OCPP_CONFIG(ReserveConnectorZeroSupported,	R,	BOOL,		false)
 
 /* Smart Charging Profile */
 OCPP_CONFIG(ChargeProfileMaxStackLevel,		R,	INT,		0)
-OCPP_CONFIG(ChargingScheduleAllowedChargingRateUnit,	R,	CSL,		0)
+OCPP_CONFIG(ChargingScheduleAllowedChargingRateUnit,	R,	CSL,	0)
 OCPP_CONFIG(ChargingScheduleMaxPeriods,		R,	INT,		0)
 OCPP_CONFIG(ConnectorSwitch3to1PhaseSupported,	R,	BOOL,		false)
 OCPP_CONFIG(MaxChargingProfilesInstalled,	R,	INT,		0)

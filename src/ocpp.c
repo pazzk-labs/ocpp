@@ -223,7 +223,7 @@ static struct message *find_msg_by_idstr(struct list *list_head,
 
 	list_for_each(p, list_head) {
 		struct message *msg = container_of(p, struct message, link);
-		if (memcmp(msgid, msg->body.id, strlen(msgid)) == 0) {
+		if (strcmp(msgid, msg->body.id) == 0) {
 			return msg;
 		}
 	}
@@ -233,8 +233,7 @@ static struct message *find_msg_by_idstr(struct list *list_head,
 
 static int push_message(const char *id, ocpp_message_t type,
 		const void *data, size_t datasize,
-		time_t timer, list_add_func_t f, bool err,
-		struct ocpp_message **created)
+		time_t timer, list_add_func_t f, bool err, void *ctx)
 {
 	struct message *msg = new_message(id, type, err);
 
@@ -244,12 +243,9 @@ static int push_message(const char *id, ocpp_message_t type,
 
 	msg->body.payload.fmt.request = data;
 	msg->body.payload.size = datasize;
+	msg->body.ctx = ctx;
 	msg->expiry = timer;
 	(*f)(msg);
-
-	if (created) {
-		*created = &msg->body;
-	}
 
 	return 0;
 }
@@ -692,33 +688,33 @@ size_t ocpp_count_pending_requests(void)
 	return count;
 }
 
-int ocpp_push_request(ocpp_message_t type, const void *data, size_t datasize,
-		struct ocpp_message **created)
+int ocpp_push_request(ocpp_message_t type,
+		const void *data, size_t datasize, void *ctx)
 {
 	int rc = 0;
 
 	ocpp_lock();
 	{
 		rc = push_message(NULL, type, data, datasize, 0,
-				put_msg_ready, 0, created);
+				put_msg_ready, 0, ctx);
 	}
 	ocpp_unlock();
 
 	return rc;
 }
 
-int ocpp_push_request_force(ocpp_message_t type, const void *data,
-		size_t datasize, struct ocpp_message **created)
+int ocpp_push_request_force(ocpp_message_t type,
+		const void *data, size_t datasize, void *ctx)
 {
 	int rc = 0;
 
 	ocpp_lock();
 	{
 		if ((rc = push_message(NULL, type, data, datasize, 0,
-				put_msg_ready, 0, created)) != 0) {
+				put_msg_ready, 0, ctx)) != 0) {
 			remove_oldest();
 			rc = push_message(NULL, type, data, datasize, 0,
-					put_msg_ready, 0, created);
+					put_msg_ready, 0, ctx);
 		}
 	}
 	ocpp_unlock();
@@ -726,8 +722,8 @@ int ocpp_push_request_force(ocpp_message_t type, const void *data,
 	return rc;
 }
 
-int ocpp_push_request_defer(ocpp_message_t type,
-		const void *data, size_t datasize, uint32_t timer_sec)
+int ocpp_push_request_defer(ocpp_message_t type, const void *data,
+		size_t datasize, uint32_t timer_sec, void *ctx)
 {
 	list_add_func_t f = put_msg_timer;
 	int rc = 0;
@@ -739,7 +735,7 @@ int ocpp_push_request_defer(ocpp_message_t type,
 	ocpp_lock();
 	{
 		rc = push_message(NULL, type, data, datasize,
-				time(NULL) + (time_t)timer_sec, f, 0, NULL);
+				time(NULL) + (time_t)timer_sec, f, 0, ctx);
 	}
 	ocpp_unlock();
 
@@ -747,18 +743,38 @@ int ocpp_push_request_defer(ocpp_message_t type,
 }
 
 int ocpp_push_response(const struct ocpp_message *req,
-		const void *data, size_t datasize, bool err)
+		const void *data, size_t datasize, bool err, void *ctx)
 {
 	int rc = 0;
 
 	ocpp_lock();
 	{
 		rc = push_message(req->id, req->type, data, datasize,
-				0, put_msg_ready, err, NULL);
+				0, put_msg_ready, err, ctx);
 	}
 	ocpp_unlock();
 
 	return rc;
+}
+
+struct ocpp_message *
+ocpp_get_message_by_id(const char id[OCPP_MESSAGE_ID_MAXLEN])
+{
+	struct ocpp_message *msg = NULL;
+
+	ocpp_lock();
+	{
+		struct message *p;
+
+		if ((p = find_msg_by_idstr(&m.tx.wait, id)) ||
+			(p = find_msg_by_idstr(&m.tx.ready, id)) ||
+			(p = find_msg_by_idstr(&m.tx.timer, id))) {
+			msg = &p->body;
+		}
+	}
+	ocpp_unlock();
+
+	return msg;
 }
 
 int ocpp_step(void)
