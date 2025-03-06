@@ -205,6 +205,7 @@ static void clear_dead_messages(void)
 	struct list *p, *n;
 
 	list_for_each_safe(p, n, &m.tx.dead) {
+		list_del(p, &m.tx.dead);
 		struct message *msg = container_of(p, struct message, link);
 		free_message(msg);
 	}
