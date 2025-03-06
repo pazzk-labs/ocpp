@@ -370,3 +370,20 @@ TEST(Core, ShouldReturnMSG_MAX_WhenInvalidTypeStringGiven) {
 TEST(Core, ShouldReturnMSG_MAX_WhenInvalidTypeIdGiven) {
 	LONGS_EQUAL(OCPP_MSG_MAX, ocpp_get_type_from_idstr("UnknownId"));
 }
+
+TEST(Core, ShouldReturnMessage_WhenMatchingMessageIdGiven) {
+	ocpp_push_request(OCPP_MSG_STATUS_NOTIFICATION, NULL, 0, NULL);
+	mock().expectOneCall("ocpp_send").andReturnValue(0);
+	mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+	step(0);
+
+	const uint8_t *id = (const uint8_t *)sent.message_id;
+	struct ocpp_message *msg = ocpp_get_message_by_id((const char *)id);
+	CHECK(msg != NULL);
+	STRCMP_EQUAL((const char *)id, msg->id);
+}
+
+TEST(Core, ShouldReturnNull_WhenNoMatchingMessageIdFound) {
+	struct ocpp_message *msg = ocpp_get_message_by_id("UnknownId");
+	POINTERS_EQUAL(NULL, msg);
+}
