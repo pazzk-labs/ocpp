@@ -70,16 +70,17 @@ struct ocpp_DataTransfer {
 	char vendorId[OCPP_CiString255]; /* required */
 	char messageId[OCPP_CiString50];
 	char padding[13];
-	char data[0];
+	char data[];
 };
 
 struct ocpp_DataTransfer_conf {
 	ocpp_data_status_t status;
-	char data[0];
+	char data[];
 };
 
 struct ocpp_GetConfiguration {
-	char keys[0];
+	char dummy;
+	char keys[];
 };
 
 struct ocpp_GetConfiguration_conf {
@@ -98,7 +99,7 @@ struct ocpp_Heartbeat_conf {
 struct ocpp_MeterValues {
 	int connectorId;
 	int transactionId;
-	struct ocpp_MeterValue meterValue;
+	uint8_t meterValue[]; /* struct ocpp_MeterValue */
 };
 
 struct ocpp_MeterValues_conf {
@@ -108,7 +109,7 @@ struct ocpp_MeterValues_conf {
 struct ocpp_RemoteStartTransaction {
 	int connectorId;
 	char idTag[OCPP_CiString20];
-	struct ocpp_ChargingProfile chargingProfile;
+	uint8_t chargingProfile[]; /* struct ocpp_ChargingProfile */
 };
 
 struct ocpp_RemoteStartTransaction_conf {
@@ -164,7 +165,7 @@ struct ocpp_StopTransaction {
 	time_t timestamp;
 	int transactionId;
 	ocpp_stop_reason_t reason;
-	struct ocpp_MeterValue transactionData;
+	uint8_t meterValue[]; /* struct ocpp_MeterValue */
 };
 
 struct ocpp_StopTransaction_conf {

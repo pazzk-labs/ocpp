@@ -11,6 +11,7 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
 
@@ -410,7 +411,7 @@ struct ocpp_ChargingSchedule {
 	ocpp_charging_unit_t chargingRateUnit;
 	int minChargingRate_tenth;
 	int nr_chargingSchedulePeriod;
-	struct ocpp_ChargingSchedulePeriod chargingSchedulePeriod[0];
+	uint8_t chargingSchedulePeriod[]; /* struct ocpp_ChargingSchedulePeriod */
 };
 
 struct ocpp_ChargingProfile {
@@ -422,7 +423,7 @@ struct ocpp_ChargingProfile {
 	ocpp_charging_profile_recurrency_t recurrencyKind;
 	time_t validFrom;
 	time_t validTo;
-	struct ocpp_ChargingSchedule chargingSchedule;
+	uint8_t chargingSchedule[]; /* struct ocpp_ChargingSchedule */
 };
 
 struct ocpp_SampledValue {
@@ -437,7 +438,8 @@ struct ocpp_SampledValue {
 
 struct ocpp_MeterValue {
 	time_t timestamp;
-	struct ocpp_SampledValue sampledValue[0];
+	size_t nr_sampledValue;
+	uint8_t sampledValue[]; /* struct ocpp_SampledValue */
 };
 
 #if defined(__cplusplus)

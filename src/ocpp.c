@@ -323,6 +323,7 @@ static bool should_send_heartbeat(const time_t *now)
 /* Retry interval for the message that is not delivered to the server. */
 static time_t get_retry_interval(const struct message *msg, const time_t *now)
 {
+	(void)msg;
 	uint32_t interval = OCPP_DEFAULT_TX_TIMEOUT_SEC;
 	return *now + interval;
 }
@@ -469,12 +470,15 @@ static int process_timer_messages(const time_t *now)
 
 static void process_central_request(const struct ocpp_message *received)
 {
+	(void)received;
 	OCPP_INFO("rx: %s.req", ocpp_stringify_type(received->type));
 }
 
 static bool process_central_response_error(const struct ocpp_message *received,
 		struct message *req, const time_t *now)
 {
+	(void)received;
+
 	if (!is_transaction_related(req)) {
 		return true;
 	}
@@ -488,9 +492,10 @@ static bool process_central_response_error(const struct ocpp_message *received,
 		update_message_expiry(req, now);
 		put_msg_wait(req);
 
-		OCPP_INFO("%s will be sent again at %ld (%d/%d)",
+		OCPP_INFO("%s will be sent again at %lu (%d/%d)",
 				ocpp_stringify_type(req->body.type),
-				req->expiry, req->attempts, max_attempts);
+				(unsigned long)req->expiry,
+				req->attempts, max_attempts);
 		return false;
 	}
 
@@ -500,6 +505,9 @@ static bool process_central_response_error(const struct ocpp_message *received,
 static bool process_central_response_result(const struct ocpp_message *received,
 		struct message *req, const time_t *now)
 {
+	(void)req;
+	(void)now;
+
 	if (received->type == OCPP_MSG_BOOTNOTIFICATION) {
 		const struct ocpp_BootNotification_conf *p =
 			(const struct ocpp_BootNotification_conf *)
@@ -670,9 +678,9 @@ ocpp_message_t ocpp_get_type_from_string(const char *typestr)
 {
 	const char **msgstr = get_typestr_array();
 
-	for (ocpp_message_t i = 0; i < OCPP_MSG_MAX; i++) {
+	for (uint32_t i = 0; i < OCPP_MSG_MAX; i++) {
 		if (strcmp(typestr, msgstr[i]) == 0) {
-			return i;
+			return (ocpp_message_t)i;
 		}
 	}
 

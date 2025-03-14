@@ -31,12 +31,12 @@ struct ocpp_GetCompositeSchedule_conf {
 	ocpp_profile_status_t status;
 	int connectorId;
 	time_t scheduleStart;
-	struct ocpp_ChargingSchedule chargingSchedule;
+	uint8_t chargingSchedule[]; /* struct ocpp_ChargingSchedule */
 };
 
 struct ocpp_SetChargingProfile {
 	int connectorId;
-	struct ocpp_ChargingProfile csChargingProfiles;
+	uint8_t csChargingProfiles[]; /* struct ocpp_ChargingProfile */
 };
 
 struct ocpp_SetChargingProfile_conf {

@@ -99,7 +99,7 @@ static void link_configuration_pool(void)
 {
 	size_t cidx = 0;
 
-	for (configuration_t i = 0; i < CONFIGURATION_MAX; i++) {
+	for (uint32_t i = 0; i < CONFIGURATION_MAX; i++) {
 		configurations[i].value = &configurations_pool[cidx];
 		cidx += get_value_cap(i);
 	}

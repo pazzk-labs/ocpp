@@ -80,7 +80,8 @@ struct ocpp_CertificateHashData {
 };
 
 struct ocpp_CertificateSigned {
-	char certificateChain[0];
+	char dummy;
+	char certificateChain[];
 };
 
 struct ocpp_CertificateSigned_conf {
@@ -116,7 +117,7 @@ struct ocpp_GetInstalledCertificateIds_conf {
 struct ocpp_LogParameters {
 	time_t oldestTimestamp;
 	time_t latestTimestamp;
-	char remoteLocation[0];
+	char remoteLocation[];
 };
 
 struct ocpp_GetLog {
@@ -124,17 +125,17 @@ struct ocpp_GetLog {
 	int requestId;
 	int retries;
 	int retryInterval;
-	struct ocpp_LogParameters log;
+	uint8_t log[];
 };
 
 struct ocpp_GetLog_conf {
 	ocpp_security_status_t status;
-	char filename[0];
+	char filename[];
 };
 
 struct ocpp_InstallCertificate {
 	ocpp_security_cert_t certificateType;
-	char certificate[0];
+	char certificate[];
 };
 
 struct ocpp_InstallCertificate_conf {
@@ -153,7 +154,7 @@ struct ocpp_LogStatusNotification_conf {
 struct ocpp_SecurityEventNotification {
 	ocpp_security_event_t type;
 	time_t timestamp;
-	char techInfo[0];
+	char techInfo[];
 };
 
 struct ocpp_SecurityEventNotification_conf {
@@ -161,7 +162,8 @@ struct ocpp_SecurityEventNotification_conf {
 };
 
 struct ocpp_SignCertificate {
-	char csr[0];
+	char dummy;
+	char csr[];
 };
 
 struct ocpp_SignCertificate_conf {
