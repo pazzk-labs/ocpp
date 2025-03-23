@@ -86,3 +86,58 @@ TEST(strconv, ShouldReturnMeasurandString_WhenMeasurandGiven) {
 	const char *y = ocpp_stringify_measurand(OCPP_MEASURAND_FREQUENCY);
 	STRCMP_EQUAL("Frequency", y);
 }
+
+TEST(strconv, ShouldReturnReservationStatusString_WhenReservationStatusGiven) {
+	const char *y = ocpp_stringify_reservation_status(OCPP_RESERVE_STATUS_ACCEPTED);
+	STRCMP_EQUAL("Accepted", y);
+}
+
+TEST(strconv, ShouldReturnReservationStatusString_WhenReservationStatusFaultedGiven) {
+	const char *y = ocpp_stringify_reservation_status(OCPP_RESERVE_STATUS_FAULTED);
+	STRCMP_EQUAL("Faulted", y);
+}
+
+TEST(strconv, ShouldReturnReservationStatusString_WhenReservationStatusOccupiedGiven) {
+	const char *y = ocpp_stringify_reservation_status(OCPP_RESERVE_STATUS_OCCUPIED);
+	STRCMP_EQUAL("Occupied", y);
+}
+
+TEST(strconv, ShouldReturnReservationStatusString_WhenReservationStatusRejectedGiven) {
+	const char *y = ocpp_stringify_reservation_status(OCPP_RESERVE_STATUS_REJECTED);
+	STRCMP_EQUAL("Rejected", y);
+}
+
+TEST(strconv, ShouldReturnReservationStatusString_WhenReservationStatusUnavailableGiven) {
+	const char *y = ocpp_stringify_reservation_status(OCPP_RESERVE_STATUS_UNAVAILABLE);
+	STRCMP_EQUAL("Unavailable", y);
+}
+
+TEST(strconv, ShouldReturnContextString_WhenContextUnknownGiven) {
+	const char *y = ocpp_stringify_context(OCPP_READ_CTX_UNKNOWN);
+	STRCMP_EQUAL("Unknown", y);
+}
+
+TEST(strconv, ShouldReturnContextString_WhenContextInterruptionBeginGiven) {
+	const char *y = ocpp_stringify_context(OCPP_READ_CTX_INT_BEGIN);
+	STRCMP_EQUAL("Interruption.Begin", y);
+}
+
+TEST(strconv, ShouldReturnContextString_WhenContextInterruptionEndGiven) {
+	const char *y = ocpp_stringify_context(OCPP_READ_CTX_INT_END);
+	STRCMP_EQUAL("Interruption.End", y);
+}
+
+TEST(strconv, ShouldReturnUnitString_WhenUnitWhGiven) {
+	const char *y = ocpp_stringify_unit(OCPP_UNIT_WH);
+	STRCMP_EQUAL("Wh", y);
+}
+
+TEST(strconv, ShouldReturnUnitString_WhenUnitKWhGiven) {
+	const char *y = ocpp_stringify_unit(OCPP_UNIT_KWH);
+	STRCMP_EQUAL("kWh", y);
+}
+
+TEST(strconv, ShouldReturnUnitString_WhenUnitCelsiusGiven) {
+	const char *y = ocpp_stringify_unit(OCPP_UNIT_CELSIUS);
+	STRCMP_EQUAL("Celsius", y);
+}
