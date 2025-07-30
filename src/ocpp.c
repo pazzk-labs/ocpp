@@ -719,6 +719,33 @@ size_t ocpp_count_pending_requests(void)
 	return count;
 }
 
+void ocpp_iterate_pending_requests(ocpp_iterate_cb_t cb, void *ctx)
+{
+	ocpp_lock();
+	{
+		struct list *p;
+
+		list_for_each(p, &m.tx.ready) {
+			const struct message *msg =
+				container_of(p, struct message, link);
+			(*cb)(&msg->body, ctx);
+		}
+
+		list_for_each(p, &m.tx.wait) {
+			struct message *msg =
+				container_of(p, struct message, link);
+			(*cb)(&msg->body, ctx);
+		}
+
+		list_for_each(p, &m.tx.timer) {
+			struct message *msg =
+				container_of(p, struct message, link);
+			(*cb)(&msg->body, ctx);
+		}
+	}
+	ocpp_unlock();
+}
+
 int ocpp_push_request(ocpp_message_t type,
 		const void *data, size_t datasize, void *ctx)
 {

@@ -34,10 +34,6 @@ enum ocpp_event {
 	/* negative for errors */
 };
 
-typedef int ocpp_event_t;
-typedef void (*ocpp_event_callback_t)(ocpp_event_t event_type,
-		const struct ocpp_message *message, void *ctx);
-
 struct ocpp_message {
 	char id[OCPP_MESSAGE_ID_MAXLEN];
 	ocpp_message_role_t role;
@@ -54,6 +50,11 @@ struct ocpp_message {
 
 	void *ctx;
 };
+
+typedef int ocpp_event_t;
+typedef void (*ocpp_event_callback_t)(ocpp_event_t event_type,
+		const struct ocpp_message *message, void *ctx);
+typedef void (*ocpp_iterate_cb_t)(const struct ocpp_message *msg, void *ctx);
 
 /**
  * @brief Initializes the OCPP module.
@@ -207,6 +208,18 @@ ocpp_message_t ocpp_get_type_from_string(const char *typestr);
  * @return Type of message. `OCPP_MSG_MAX` if no matching found.
  */
 ocpp_message_t ocpp_get_type_from_idstr(const char *idstr);
+
+/**
+ * @brief Iterates over pending OCPP requests and applies a callback.
+ *
+ * This function traverses the list of pending OCPP requests and invokes
+ * the provided callback function for each request. The callback can be
+ * used to process or inspect the requests.
+ *
+ * @param[in] cb The callback function to apply to each pending request.
+ * @param[in] ctx A user-defined context pointer passed to the callback.
+ */
+void ocpp_iterate_pending_requests(ocpp_iterate_cb_t cb, void *ctx);
 
 #if defined(__cplusplus)
 }
