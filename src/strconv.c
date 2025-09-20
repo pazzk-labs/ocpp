@@ -170,76 +170,6 @@ const char *ocpp_stringify_stop_reason(ocpp_stop_reason_t reason)
 	return tbl[reason];
 }
 
-ocpp_measurand_t ocpp_get_measurand_from_string(const char *str,
-		const size_t len)
-{
-	const struct {
-		const char *str;
-		ocpp_measurand_t code;
-	} supported[] = {
-		{ "Current.Export", OCPP_MEASURAND_CURRENT_EXPORT },
-		{ "Current.Import", OCPP_MEASURAND_CURRENT_IMPORT },
-		{ "Current.Offered", OCPP_MEASURAND_CURRENT_OFFERED },
-		{ "Energy.Active.Export.Register", OCPP_MEASURAND_ENERGY_ACTIVE_EXPORT_REGISTER },
-		{ "Energy.Active.Import.Register", OCPP_MEASURAND_ENERGY_ACTIVE_IMPORT_REGISTER },
-		{ "Energy.Reactive.Export.Register", OCPP_MEASURAND_ENERGY_REACTIVE_EXPORT_REGISTER },
-		{ "Energy.Reactive.Import.Register", OCPP_MEASURAND_ENERGY_REACTIVE_IMPORT_REGISTER },
-		{ "Energy.Active.Export.Interval", OCPP_MEASURAND_ENERGY_ACTIVE_EXPORT_INTERVAL },
-		{ "Energy.Active.Import.Interval", OCPP_MEASURAND_ENERGY_ACTIVE_IMPORT_INTERVAL },
-		{ "Energy.Reactive.Export.Interval", OCPP_MEASURAND_ENERGY_REACTIVE_EXPORT_INTERVAL },
-		{ "Energy.Reactive.Import.Interval", OCPP_MEASURAND_ENERGY_REACTIVE_IMPORT_INTERVAL },
-		{ "Frequency", OCPP_MEASURAND_FREQUENCY },
-		{ "Power.Active.Export", OCPP_MEASURAND_POWER_ACTIVE_EXPORT },
-		{ "Power.Active.Import", OCPP_MEASURAND_POWER_ACTIVE_IMPORT },
-		{ "Power.Factor", OCPP_MEASURAND_POWER_FACTOR },
-		{ "Power.Offered", OCPP_MEASURAND_POWER_OFFERED },
-		{ "Power.Reactive.Export", OCPP_MEASURAND_POWER_REACTIVE_EXPORT },
-		{ "Power.Reactive.Import", OCPP_MEASURAND_POWER_REACTIVE_IMPORT },
-		{ "RPM", OCPP_MEASURAND_RPM },
-		{ "SoC", OCPP_MEASURAND_SOC },
-		{ "Temperature", OCPP_MEASURAND_TEMPERATURE },
-		{ "Voltage", OCPP_MEASURAND_VOLTAGE },
-	};
-
-	for (size_t i = 0; i < ARRAY_COUNT(supported); i++) {
-		if (strncmp(str, supported[i].str, len) == 0) {
-			return supported[i].code;
-		}
-	}
-
-	return (ocpp_measurand_t)0;
-}
-
-ocpp_auth_status_t ocpp_get_auth_status_from_string(const char *str)
-{
-	if (strcmp(str, "Accepted") == 0) {
-		return OCPP_AUTH_STATUS_ACCEPTED;
-	} else if (strcmp(str, "Blocked") == 0) {
-		return OCPP_AUTH_STATUS_BLOCKED;
-	} else if (strcmp(str, "Expired") == 0) {
-		return OCPP_AUTH_STATUS_EXPIRED;
-	} else if (strcmp(str, "Invalid") == 0) {
-		return OCPP_AUTH_STATUS_INVALID;
-	} else if (strcmp(str, "ConcurrentTx") == 0) {
-		return OCPP_AUTH_STATUS_CONCURRENT_TX;
-	} else {
-		return OCPP_AUTH_STATUS_UNKNOWN;
-	}
-}
-
-ocpp_boot_status_t ocpp_get_boot_status_from_string(const char *str)
-{
-	if (strcmp(str, "Accepted") == 0) {
-		return OCPP_BOOT_STATUS_ACCEPTED;
-	} else if (strcmp(str, "Rejected") == 0) {
-		return OCPP_BOOT_STATUS_REJECTED;
-	} else if (strcmp(str, "Pending") == 0) {
-		return OCPP_BOOT_STATUS_PENDING;
-	} else {
-		return OCPP_BOOT_STATUS_UNKNOWN;
-	}
-}
-
 const char *ocpp_stringify_context(ocpp_reading_context_t ctx)
 {
 	const char *tbl[] = {
@@ -310,4 +240,97 @@ const char *ocpp_stringify_measurand(ocpp_measurand_t measurand)
 	};
 
 	return tbl[__builtin_ctz(measurand)];
+}
+
+ocpp_measurand_t ocpp_get_measurand_from_string(const char *str,
+		const size_t len)
+{
+	const struct {
+		const char *str;
+		ocpp_measurand_t code;
+	} supported[] = {
+		{ "Current.Export", OCPP_MEASURAND_CURRENT_EXPORT },
+		{ "Current.Import", OCPP_MEASURAND_CURRENT_IMPORT },
+		{ "Current.Offered", OCPP_MEASURAND_CURRENT_OFFERED },
+		{ "Energy.Active.Export.Register", OCPP_MEASURAND_ENERGY_ACTIVE_EXPORT_REGISTER },
+		{ "Energy.Active.Import.Register", OCPP_MEASURAND_ENERGY_ACTIVE_IMPORT_REGISTER },
+		{ "Energy.Reactive.Export.Register", OCPP_MEASURAND_ENERGY_REACTIVE_EXPORT_REGISTER },
+		{ "Energy.Reactive.Import.Register", OCPP_MEASURAND_ENERGY_REACTIVE_IMPORT_REGISTER },
+		{ "Energy.Active.Export.Interval", OCPP_MEASURAND_ENERGY_ACTIVE_EXPORT_INTERVAL },
+		{ "Energy.Active.Import.Interval", OCPP_MEASURAND_ENERGY_ACTIVE_IMPORT_INTERVAL },
+		{ "Energy.Reactive.Export.Interval", OCPP_MEASURAND_ENERGY_REACTIVE_EXPORT_INTERVAL },
+		{ "Energy.Reactive.Import.Interval", OCPP_MEASURAND_ENERGY_REACTIVE_IMPORT_INTERVAL },
+		{ "Frequency", OCPP_MEASURAND_FREQUENCY },
+		{ "Power.Active.Export", OCPP_MEASURAND_POWER_ACTIVE_EXPORT },
+		{ "Power.Active.Import", OCPP_MEASURAND_POWER_ACTIVE_IMPORT },
+		{ "Power.Factor", OCPP_MEASURAND_POWER_FACTOR },
+		{ "Power.Offered", OCPP_MEASURAND_POWER_OFFERED },
+		{ "Power.Reactive.Export", OCPP_MEASURAND_POWER_REACTIVE_EXPORT },
+		{ "Power.Reactive.Import", OCPP_MEASURAND_POWER_REACTIVE_IMPORT },
+		{ "RPM", OCPP_MEASURAND_RPM },
+		{ "SoC", OCPP_MEASURAND_SOC },
+		{ "Temperature", OCPP_MEASURAND_TEMPERATURE },
+		{ "Voltage", OCPP_MEASURAND_VOLTAGE },
+	};
+
+	for (size_t i = 0; i < ARRAY_COUNT(supported); i++) {
+		if (strncmp(str, supported[i].str, len) == 0) {
+			return supported[i].code;
+		}
+	}
+
+	return (ocpp_measurand_t)0;
+}
+
+ocpp_auth_status_t ocpp_get_auth_status_from_string(const char *str)
+{
+	if (strcmp(str, "Accepted") == 0) {
+		return OCPP_AUTH_STATUS_ACCEPTED;
+	} else if (strcmp(str, "Blocked") == 0) {
+		return OCPP_AUTH_STATUS_BLOCKED;
+	} else if (strcmp(str, "Expired") == 0) {
+		return OCPP_AUTH_STATUS_EXPIRED;
+	} else if (strcmp(str, "Invalid") == 0) {
+		return OCPP_AUTH_STATUS_INVALID;
+	} else if (strcmp(str, "ConcurrentTx") == 0) {
+		return OCPP_AUTH_STATUS_CONCURRENT_TX;
+	} else {
+		return OCPP_AUTH_STATUS_UNKNOWN;
+	}
+}
+
+ocpp_boot_status_t ocpp_get_boot_status_from_string(const char *str)
+{
+	if (strcmp(str, "Accepted") == 0) {
+		return OCPP_BOOT_STATUS_ACCEPTED;
+	} else if (strcmp(str, "Rejected") == 0) {
+		return OCPP_BOOT_STATUS_REJECTED;
+	} else if (strcmp(str, "Pending") == 0) {
+		return OCPP_BOOT_STATUS_PENDING;
+	} else {
+		return OCPP_BOOT_STATUS_UNKNOWN;
+	}
+}
+
+ocpp_trigger_message_t ocpp_get_trigger_message_from_string(const char *str)
+{
+	if (strcmp(str, "BootNotification") == 0) {
+		return OCPP_TRIGGER_BOOT_NOTIFICATION;
+	} else if (strcmp(str, "DiagnosticsStatusNotification") == 0) {
+		return OCPP_TRIGGER_DIAGNOSTICS_STATUS;
+	} else if (strcmp(str, "FirmwareStatusNotification") == 0) {
+		return OCPP_TRIGGER_FIRMWARE_STATUS;
+	} else if (strcmp(str, "Heartbeat") == 0) {
+		return OCPP_TRIGGER_HEARTBEAT;
+	} else if (strcmp(str, "MeterValues") == 0) {
+		return OCPP_TRIGGER_METER_VALUE;
+	} else if (strcmp(str, "StatusNotification") == 0) {
+		return OCPP_TRIGGER_STATUS_NOTIFICATION;
+	} else if (strcmp(str, "LogStatusNotification") == 0) {
+		return OCPP_TRIGGER_LOG_STATUS_NOTIFICATION;
+	} else if (strcmp(str, "SignChargePointCertificate") == 0) {
+		return OCPP_TRIGGER_SIGN_CP_CERTIFICATE;
+	} else {
+		return OCPP_TRIGGER_UNKNOWN;
+	}
 }
