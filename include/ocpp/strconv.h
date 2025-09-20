@@ -24,6 +24,9 @@ const char *ocpp_stringify_remote_status(ocpp_remote_status_t status);
 const char *ocpp_stringify_reservation_status(ocpp_reservation_status_t status);
 const char *ocpp_stringify_trigger_status(ocpp_trigger_status_t status);
 const char *ocpp_stringify_stop_reason(ocpp_stop_reason_t reason);
+const char *ocpp_stringify_context(ocpp_reading_context_t ctx);
+const char *ocpp_stringify_unit(ocpp_measure_unit_t unit);
+const char *ocpp_stringify_measurand(ocpp_measurand_t measurand);
 
 /**
  * @brief Converts a string to an ocpp_measurand_t enum value.
@@ -43,10 +46,7 @@ ocpp_measurand_t ocpp_get_measurand_from_string(const char *str,
 
 ocpp_auth_status_t ocpp_get_auth_status_from_string(const char *str);
 ocpp_boot_status_t ocpp_get_boot_status_from_string(const char *str);
-
-const char *ocpp_stringify_context(ocpp_reading_context_t ctx);
-const char *ocpp_stringify_unit(ocpp_measure_unit_t unit);
-const char *ocpp_stringify_measurand(ocpp_measurand_t measurand);
+ocpp_trigger_message_t ocpp_get_trigger_message_from_string(const char *str);
 
 #if defined(__cplusplus)
 }
