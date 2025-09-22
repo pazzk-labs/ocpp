@@ -23,7 +23,9 @@ int ocpp_send(const struct ocpp_message *msg) {
         sent.role = msg->role;
         sent.type = msg->type;
 
-        return mock().actualCall(__func__).returnIntValueOrDefault(0);
+        return mock().actualCall(__func__)
+		//.withMemoryBufferParameter("msg", (const uint8_t *)msg, sizeof(*msg))
+		.returnIntValueOrDefault(0);
 }
 
 int ocpp_recv(struct ocpp_message *msg)
@@ -460,25 +462,201 @@ TEST(Core, ShouldFindMessageInWaitList_AfterSending) {
 TEST(Core, ShouldRetryMessage_WhenMaxAttemptsNotReached) {
         // Setup a message
         ocpp_push_request(OCPP_MSG_BOOTNOTIFICATION, NULL, 0, NULL);
-        
+
         // First attempt
         mock().expectOneCall("ocpp_send").andReturnValue(0);
         mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
         step(0);
-        
+
         // Get the message ID
         const uint8_t *id = (const uint8_t *)sent.message_id;
-        
+
         // Verify message is in wait list
         struct ocpp_message *msg = ocpp_get_message_by_id((const char *)id);
         CHECK(msg != NULL);
-        
+
         // Simulate timeout and retry
         mock().expectOneCall("ocpp_send").andReturnValue(0);
         mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
         step(10); // Move time forward to trigger retry
-        
+
         // Verify message is still in the system
         msg = ocpp_get_message_by_id((const char *)id);
         CHECK(msg != NULL);
+}
+
+TEST(Core, ShouldSendCallError_WhenRecvReturnsError) {
+        // Test that CallError is sent when ocpp_recv returns an error for CALL message
+        struct ocpp_message incoming_call = {
+                .role = OCPP_MSG_ROLE_CALL,
+                .type = OCPP_MSG_HEARTBEAT,
+        };
+        strcpy(incoming_call.id, "test-call-id");
+
+        // Mock ocpp_recv to return an error (not -ENOTSUP and not -ENOENT)
+        mock().expectOneCall("ocpp_recv")
+                .withOutputParameterReturning("msg", &incoming_call, sizeof(incoming_call))
+                .andReturnValue(-EINVAL);  // This will cause err != 0 and err != -ENOENT
+
+        // First step to process the error and queue the CallError
+        step(0);
+
+        // Now expect the CallError to be sent in the next step
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        mock().expectOneCall("ocpp_send").andReturnValue(0);
+        mock().expectOneCall("on_ocpp_event").ignoreOtherParameters(); // Additional event for CallError
+        step(1);
+
+        // Verify that a CallError was sent
+        check_tx(OCPP_MSG_ROLE_CALLERROR, OCPP_MSG_HEARTBEAT);
+        // Note: Message ID matching may differ due to CallError generation process
+}
+
+TEST(Core, ShouldNotSendCallError_WhenRecvReturnsENOENT) {
+        // Test that CallError is NOT sent when ocpp_recv returns -ENOENT
+        struct ocpp_message incoming_call = {
+                .role = OCPP_MSG_ROLE_CALL,
+                .type = OCPP_MSG_HEARTBEAT,
+        };
+        strcpy(incoming_call.id, "test-call-id");
+
+        // Mock ocpp_recv to return -ENOENT (should not trigger CallError)
+        mock().expectOneCall("ocpp_recv")
+                .withOutputParameterReturning("msg", &incoming_call, sizeof(incoming_call))
+                .andReturnValue(-ENOENT);
+
+        step(0);
+
+        // Verify no CallError is queued by checking next step has no sends
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        step(1);
+
+        // No additional verification needed - test passes if no unexpected calls
+}
+
+TEST(Core, ShouldHandleCallMessagesCorrectly) {
+        // Simple test to verify CALL messages are handled
+        struct ocpp_message incoming_call = {
+                .role = OCPP_MSG_ROLE_CALL,
+                .type = OCPP_MSG_HEARTBEAT,
+        };
+        strcpy(incoming_call.id, "test-call-id");
+
+        // Mock ocpp_recv to return successful processing
+        mock().expectOneCall("ocpp_recv")
+                .withOutputParameterReturning("msg", &incoming_call, sizeof(incoming_call))
+                .andReturnValue(0);
+
+        // Expect event dispatch for the incoming message
+        mock().expectOneCall("on_ocpp_event")
+                .ignoreOtherParameters();
+
+        step(0);
+
+        // Test completed successfully if no asserts failed
+}
+
+TEST(Core, ShouldSendCallError_WhenProcessingUnsupportedCallMessage) {
+        // Test that CallError is sent when ocpp_recv returns -ENOTSUP for CALL message
+        struct ocpp_message incoming_call = {
+                .role = OCPP_MSG_ROLE_CALL,
+                .type = OCPP_MSG_HEARTBEAT,
+        };
+        strcpy(incoming_call.id, "test-call-id");
+
+        // Mock ocpp_recv to return -ENOTSUP (unsupported message)
+        mock().expectOneCall("ocpp_recv")
+                .withOutputParameterReturning("msg", &incoming_call, sizeof(incoming_call))
+                .andReturnValue(-ENOTSUP);
+
+        // Expect event dispatch for the incoming message
+        mock().expectOneCall("on_ocpp_event")
+                .ignoreOtherParameters();
+
+        // First step to process the unsupported message and queue the CallError
+        step(0);
+
+        // Now expect the CallError to be sent in the next step
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        mock().expectOneCall("ocpp_send").andReturnValue(0);
+        mock().expectOneCall("on_ocpp_event").ignoreOtherParameters(); // Additional event for CallError
+        step(1);
+
+        // Verify that a CallError was sent
+        check_tx(OCPP_MSG_ROLE_CALLERROR, OCPP_MSG_HEARTBEAT);
+        // Note: Message ID matching may differ due to CallError generation process
+}
+
+TEST(Core, ShouldNotSendCallError_WhenReceivingUnsupportedNonCallMessage) {
+        // Test that unsupported non-CALL messages do NOT trigger CallError response
+        struct ocpp_message incoming_result = {
+                .role = OCPP_MSG_ROLE_CALLRESULT,
+                .type = OCPP_MSG_HEARTBEAT,
+        };
+        strcpy(incoming_result.id, "test-result-id");
+
+        // Mock ocpp_recv to return -ENOTSUP to simulate unsupported message
+        mock().expectOneCall("ocpp_recv")
+                .withOutputParameterReturning("msg", &incoming_result, sizeof(incoming_result))
+                .andReturnValue(-ENOTSUP);
+
+        // Expect event dispatch for the incoming message
+        mock().expectOneCall("on_ocpp_event")
+                .ignoreOtherParameters();
+
+        step(0);
+
+        // Verify no CallError is queued by checking next step has no sends
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        step(1);
+
+        // No CallError should be sent for non-CALL messages, even if unsupported
+}
+
+TEST(Core, ShouldNotSendCallError_WhenReceivingErrorsOnNonCallMessages) {
+        // Test that errors on non-CALL messages do NOT trigger CallError response
+        struct ocpp_message incoming_result = {
+                .role = OCPP_MSG_ROLE_CALLRESULT,
+                .type = OCPP_MSG_HEARTBEAT,
+        };
+        strcpy(incoming_result.id, "test-result-id");
+
+        // Mock ocpp_recv to return an error for non-CALL message
+        mock().expectOneCall("ocpp_recv")
+                .withOutputParameterReturning("msg", &incoming_result, sizeof(incoming_result))
+                .andReturnValue(-EINVAL);
+
+        step(0);
+
+        // Verify no CallError is queued by checking next step has no sends
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        step(1);
+
+        // No CallError should be sent for non-CALL messages, even with errors
+}
+
+TEST(Core, ShouldProcessSupportedCallMessages_WithoutCallError) {
+        // Test that supported CALL messages are processed normally without CallError
+        struct ocpp_message incoming_call = {
+                .role = OCPP_MSG_ROLE_CALL,
+                .type = OCPP_MSG_HEARTBEAT,
+        };
+        strcpy(incoming_call.id, "test-call-id");
+
+        // Mock ocpp_recv to return success (0) for supported message
+        mock().expectOneCall("ocpp_recv")
+                .withOutputParameterReturning("msg", &incoming_call, sizeof(incoming_call))
+                .andReturnValue(0);
+
+        // Expect event dispatch for the incoming message
+        mock().expectOneCall("on_ocpp_event")
+                .ignoreOtherParameters();
+
+        step(0);
+
+        // Verify no CallError is queued by checking next step has no sends
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        step(1);
+
+        // No CallError should be sent for successfully processed CALL messages
 }
