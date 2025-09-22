@@ -563,7 +563,7 @@ static int process_incoming_messages(const time_t *now)
 	int err = ocpp_recv(&received);
 	ocpp_lock();
 
-	if (err != 0 && err != -ENOTSUP) {
+	if (err && err != -ENOTSUP) {
 		goto out;
 	}
 
@@ -582,17 +582,15 @@ static int process_incoming_messages(const time_t *now)
 	}
 
 	update_last_rx_timestamp(now);
-
-	if (err == -ENOTSUP && received.role == OCPP_MSG_ROLE_CALL) {
-		/* Send CallError if the message is not supported. */
-		push_message(received.id, received.type, NULL, 0, 0,
-				put_msg_ready, true, NULL);
-	} else {
-		dispatch_event(err, &received);
-	}
-
+	dispatch_event(err, &received);
 	clear_dead_messages();
 out:
+	if (err && err != -ENOENT && received.role == OCPP_MSG_ROLE_CALL) {
+		/* Send CallError if the message could not be processed. */
+		push_message(received.id, received.type, NULL, 0, 0,
+				put_msg_ready, true, NULL);
+	}
+
 	return err;
 }
 
