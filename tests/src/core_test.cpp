@@ -660,3 +660,203 @@ TEST(Core, ShouldProcessSupportedCallMessages_WithoutCallError) {
 
         // No CallError should be sent for successfully processed CALL messages
 }
+
+TEST(Core, ShouldNotSendHeartBeat_WhenReceivedMessageWithinInterval) {
+        // Test that heartbeat is not sent when a message was received within the interval
+        go_bootnoti_accepted();
+
+        int interval;
+        ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
+
+        // Simulate receiving a message first
+        struct ocpp_message incoming_call = {
+                .role = OCPP_MSG_ROLE_CALL,
+                .type = OCPP_MSG_HEARTBEAT,
+        };
+        strcpy(incoming_call.id, "test-call-id");
+
+        mock().expectOneCall("ocpp_recv")
+                .withOutputParameterReturning("msg", &incoming_call, sizeof(incoming_call))
+                .andReturnValue(0);
+        mock().expectOneCall("on_ocpp_event").ignoreOtherParameters();
+        step(10); // Receive message at time 10
+
+        // Now step forward but less than interval since last RX
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        step(10 + interval - 1); // Still within interval since last RX
+
+        // No heartbeat should be sent because RX timestamp is more recent
+}
+
+TEST(Core, ShouldSendHeartBeat_WhenOnlyOldRxMessageWithinInterval) {
+        // Test that heartbeat is sent when only old RX messages exist within interval
+        go_bootnoti_accepted();
+
+        int interval;
+        ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
+
+        // Simulate receiving a message at an early time
+        struct ocpp_message incoming_call = {
+                .role = OCPP_MSG_ROLE_CALL,
+                .type = OCPP_MSG_HEARTBEAT,
+        };
+        strcpy(incoming_call.id, "test-call-id");
+
+        mock().expectOneCall("ocpp_recv")
+                .withOutputParameterReturning("msg", &incoming_call, sizeof(incoming_call))
+                .andReturnValue(0);
+        mock().expectOneCall("on_ocpp_event").ignoreOtherParameters();
+        step(10); // Receive message at time 10
+
+        // Now step forward past the interval since both TX and RX
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        mock().expectOneCall("ocpp_send").andReturnValue(0);
+        step(10 + interval + 1); // Past interval since last message
+        check_tx(OCPP_MSG_ROLE_CALL, OCPP_MSG_HEARTBEAT);
+}
+
+TEST(Core, ShouldUseLatestTimestamp_WhenRxMoreRecentThanTx) {
+        // Test that heartbeat uses RX timestamp when it's more recent than TX
+        go_bootnoti_accepted();
+
+        int interval;
+        ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
+
+        // Receive an RX message to set RX timestamp
+        struct ocpp_message incoming_call = {
+                .role = OCPP_MSG_ROLE_CALL,
+                .type = OCPP_MSG_HEARTBEAT,
+        };
+        strcpy(incoming_call.id, "test-call-id");
+
+        mock().expectOneCall("ocpp_recv")
+                .withOutputParameterReturning("msg", &incoming_call, sizeof(incoming_call))
+                .andReturnValue(0);
+        mock().expectOneCall("on_ocpp_event").ignoreOtherParameters();
+        step(50); // RX at time 50
+
+        // Step forward less than interval since RX
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        step(50 + interval - 1); // Within interval since RX (time 50)
+
+        // No heartbeat should be sent because we're within interval since last RX
+}
+
+TEST(Core, ShouldSendHeartBeat_WhenTxSentButNoResponseReceived) {
+        // Test that heartbeat is sent when TX timestamp is NOT updated without response
+        // We'll verify this indirectly by checking heartbeat behavior
+        go_bootnoti_accepted();
+
+        int interval;
+        ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
+
+        // Just check that heartbeat is sent after interval from initialization
+        // since TX timestamp is only updated when response is received, not when sent
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        mock().expectOneCall("ocpp_send").andReturnValue(0);
+        step(interval + 1); // Past interval since initialization
+        check_tx(OCPP_MSG_ROLE_CALL, OCPP_MSG_HEARTBEAT);
+}
+
+TEST(Core, ShouldNotSendHeartBeat_WhenTxResponseReceivedRecently) {
+        // Test that TX timestamp IS updated when response is received
+        // This uses the existing go_bootnoti_accepted() which completes a TX transaction
+        go_bootnoti_accepted();
+
+        int interval;
+        ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
+
+        // At this point, TX timestamp was updated when BootNotification response was received
+        // Step forward less than interval - no heartbeat should be sent
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        step(interval - 1); // Within interval since TX response
+
+        // No heartbeat should be sent because we're within interval since TX response
+}
+
+TEST(Core, ShouldSendHeartBeat_WhenElapsedTimeEqualsIntervalExactly) {
+        // Test boundary condition: elapsed time = interval (should send heartbeat)
+        // Since condition is "elapsed < interval", when elapsed == interval, it should send
+        go_bootnoti_accepted();
+
+        int interval;
+        ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
+
+        // Step forward exactly interval time - should send heartbeat
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        mock().expectOneCall("ocpp_send").andReturnValue(0);
+        step(interval); // elapsed == interval, should send (not < interval)
+
+        check_tx(OCPP_MSG_ROLE_CALL, OCPP_MSG_HEARTBEAT);
+}
+
+TEST(Core, ShouldSendHeartBeat_WhenElapsedTimeExceedsInterval) {
+        // Test boundary condition: elapsed time > interval (should send heartbeat)
+        go_bootnoti_accepted();
+
+        int interval;
+        ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
+
+        // Step forward just past interval - should send heartbeat
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        mock().expectOneCall("ocpp_send").andReturnValue(0);
+        step(interval + 1); // elapsed > interval, should send
+
+        check_tx(OCPP_MSG_ROLE_CALL, OCPP_MSG_HEARTBEAT);
+}
+
+TEST(Core, ShouldSendHeartBeat_WhenElapsedTimeEqualsIntervalFromRxMessage) {
+        // Test boundary condition with RX message: elapsed time = interval (should send)
+        go_bootnoti_accepted();
+
+        int interval;
+        ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
+
+        // Receive an RX message to set RX timestamp
+        struct ocpp_message incoming_call = {
+                .role = OCPP_MSG_ROLE_CALL,
+                .type = OCPP_MSG_HEARTBEAT,
+        };
+        strcpy(incoming_call.id, "test-call-id");
+
+        mock().expectOneCall("ocpp_recv")
+                .withOutputParameterReturning("msg", &incoming_call, sizeof(incoming_call))
+                .andReturnValue(0);
+        mock().expectOneCall("on_ocpp_event").ignoreOtherParameters();
+        step(10); // RX at time 10
+
+        // Step forward exactly interval from RX time - should send heartbeat
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        mock().expectOneCall("ocpp_send").andReturnValue(0);
+        step(10 + interval); // elapsed == interval from RX, should send
+
+        check_tx(OCPP_MSG_ROLE_CALL, OCPP_MSG_HEARTBEAT);
+}
+
+TEST(Core, ShouldSendHeartBeat_WhenElapsedTimeExceedsIntervalFromRxMessage) {
+        // Test boundary condition with RX message: elapsed time > interval
+        go_bootnoti_accepted();
+
+        int interval;
+        ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), NULL);
+
+        // Receive an RX message to set RX timestamp
+        struct ocpp_message incoming_call = {
+                .role = OCPP_MSG_ROLE_CALL,
+                .type = OCPP_MSG_HEARTBEAT,
+        };
+        strcpy(incoming_call.id, "test-call-id");
+
+        mock().expectOneCall("ocpp_recv")
+                .withOutputParameterReturning("msg", &incoming_call, sizeof(incoming_call))
+                .andReturnValue(0);
+        mock().expectOneCall("on_ocpp_event").ignoreOtherParameters();
+        step(10); // RX at time 10
+
+        // Step forward just past interval from RX time - should send heartbeat
+        mock().expectOneCall("ocpp_recv").ignoreOtherParameters().andReturnValue(-ENOMSG);
+        mock().expectOneCall("ocpp_send").andReturnValue(0);
+        step(10 + interval + 1); // elapsed > interval from RX, should send
+
+        check_tx(OCPP_MSG_ROLE_CALL, OCPP_MSG_HEARTBEAT);
+}
