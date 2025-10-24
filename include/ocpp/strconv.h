@@ -27,6 +27,7 @@ const char *ocpp_stringify_stop_reason(ocpp_stop_reason_t reason);
 const char *ocpp_stringify_context(ocpp_reading_context_t ctx);
 const char *ocpp_stringify_unit(ocpp_measure_unit_t unit);
 const char *ocpp_stringify_measurand(ocpp_measurand_t measurand);
+const char *ocpp_stringify_charging_unit(ocpp_charging_unit_t unit);
 
 /**
  * @brief Converts a string to an ocpp_measurand_t enum value.
@@ -47,6 +48,13 @@ ocpp_measurand_t ocpp_get_measurand_from_string(const char *str,
 ocpp_auth_status_t ocpp_get_auth_status_from_string(const char *str);
 ocpp_boot_status_t ocpp_get_boot_status_from_string(const char *str);
 ocpp_trigger_message_t ocpp_get_trigger_message_from_string(const char *str);
+ocpp_charging_profile_purpose_t
+ocpp_get_charging_profile_purpose_from_string(const char *str);
+ocpp_charging_profile_kind_t
+ocpp_get_charging_profile_kind_from_string(const char *str);
+ocpp_charging_profile_recurrency_t
+ocpp_get_charging_profile_recurrency_from_string(const char *str);
+ocpp_charging_unit_t ocpp_get_charging_unit_from_string(const char *str);
 
 #if defined(__cplusplus)
 }

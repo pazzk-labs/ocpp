@@ -14,11 +14,14 @@ extern "C" {
 #include "ocpp/type.h"
 
 struct ocpp_ClearChargingProfile {
-	int implement;
+	int id;
+	int connectorId;
+	int stackLevel;
+	ocpp_charging_profile_purpose_t chargingProfilePurpose;
 };
 
 struct ocpp_ClearChargingProfile_conf {
-	int implement;
+	ocpp_profile_status_t status;
 };
 
 struct ocpp_GetCompositeSchedule {

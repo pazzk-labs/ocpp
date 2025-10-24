@@ -242,6 +242,17 @@ const char *ocpp_stringify_measurand(ocpp_measurand_t measurand)
 	return tbl[__builtin_ctz(measurand)];
 }
 
+const char *ocpp_stringify_charging_unit(ocpp_charging_unit_t unit)
+{
+	const char *tbl[] = {
+		[OCPP_CHARGING_UNIT_NONE] = "Unknown",
+		[OCPP_CHARGING_UNIT_WATT] = "W",
+		[OCPP_CHARGING_UNIT_AMPERE] = "A",
+	};
+
+	return tbl[unit];
+}
+
 ocpp_measurand_t ocpp_get_measurand_from_string(const char *str,
 		const size_t len)
 {
@@ -333,4 +344,51 @@ ocpp_trigger_message_t ocpp_get_trigger_message_from_string(const char *str)
 	} else {
 		return OCPP_TRIGGER_UNKNOWN;
 	}
+}
+
+ocpp_charging_profile_purpose_t
+ocpp_get_charging_profile_purpose_from_string(const char *str)
+{
+	if (strcmp(str, "ChargePointMaxProfile") == 0) {
+		return OCPP_CHARGING_PROFILE_MAX;
+	} else if (strcmp(str, "TxDefaultProfile") == 0) {
+		return OCPP_CHARGING_PROFILE_TX_DEFAULT;
+	} else if (strcmp(str, "TxProfile") == 0) {
+		return OCPP_CHARGING_PROFILE_TX;
+	}
+	return OCPP_CHARGING_PROFILE_UNKNOWN;
+}
+
+ocpp_charging_profile_kind_t
+ocpp_get_charging_profile_kind_from_string(const char *str)
+{
+	if (strcmp(str, "Absolute") == 0) {
+		return OCPP_CHARGING_PROFILE_KIND_ABSOLUTE;
+	} else if (strcmp(str, "Recurring") == 0) {
+		return OCPP_CHARGING_PROFILE_KIND_RECURRING;
+	} else if (strcmp(str, "Relative") == 0) {
+		return OCPP_CHARGING_PROFILE_KIND_RELATIVE;
+	}
+	return OCPP_CHARGING_PROFILE_KIND_UNKNOWN;
+}
+
+ocpp_charging_profile_recurrency_t
+ocpp_get_charging_profile_recurrency_from_string(const char *str)
+{
+	if (strcmp(str, "Daily") == 0) {
+		return OCPP_CHARGING_PROFILE_RECURRENCY_DAILY;
+	} else if (strcmp(str, "Weekly") == 0) {
+		return OCPP_CHARGING_PROFILE_RECURRENCY_WEEKLY;
+	}
+	return OCPP_CHARGING_PROFILE_RECURRENCY_UNKNOWN;
+}
+
+ocpp_charging_unit_t ocpp_get_charging_unit_from_string(const char *str)
+{
+	if (strcmp(str, "W") == 0) {
+		return OCPP_CHARGING_UNIT_WATT;
+	} else if (strcmp(str, "A") == 0) {
+		return OCPP_CHARGING_UNIT_AMPERE;
+	}
+	return OCPP_CHARGING_UNIT_NONE;
 }

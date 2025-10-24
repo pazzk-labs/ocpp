@@ -181,18 +181,21 @@ typedef enum {
 } ocpp_reading_context_t;
 
 typedef enum {
+	OCPP_CHARGING_PROFILE_UNKNOWN,
 	OCPP_CHARGING_PROFILE_MAX,
 	OCPP_CHARGING_PROFILE_TX_DEFAULT,
 	OCPP_CHARGING_PROFILE_TX,
 } ocpp_charging_profile_purpose_t;
 
 typedef enum {
+	OCPP_CHARGING_PROFILE_KIND_UNKNOWN,
 	OCPP_CHARGING_PROFILE_KIND_ABSOLUTE,
 	OCPP_CHARGING_PROFILE_KIND_RECURRING,
 	OCPP_CHARGING_PROFILE_KIND_RELATIVE,
 } ocpp_charging_profile_kind_t;
 
 typedef enum {
+	OCPP_CHARGING_PROFILE_RECURRENCY_UNKNOWN,
 	OCPP_CHARGING_PROFILE_RECURRENCY_DAILY,
 	OCPP_CHARGING_PROFILE_RECURRENCY_WEEKLY,
 } ocpp_charging_profile_recurrency_t;
@@ -412,7 +415,7 @@ struct ocpp_ChargingSchedule {
 	ocpp_charging_unit_t chargingRateUnit;
 	int minChargingRate_tenth;
 	int nr_chargingSchedulePeriod;
-	uint8_t chargingSchedulePeriod[]; /* struct ocpp_ChargingSchedulePeriod */
+	struct ocpp_ChargingSchedulePeriod chargingSchedulePeriod[];
 };
 
 struct ocpp_ChargingProfile {
