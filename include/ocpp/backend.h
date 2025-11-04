@@ -28,6 +28,17 @@ struct ocpp_backend_message {
 	uint8_t payload[];
 } __attribute__((packed));
 
+/**
+ * @brief Callback function type for iterating over backend messages.
+ *
+ * This callback is used to process each backend message during iteration.
+ * The function should return `true` to continue the iteration or `false`
+ * to stop it.
+ *
+ * @param[in] msg Pointer to the current backend message being processed.
+ * @param[in] ctx User-defined context passed to the callback.
+ * @return `true` to continue iteration, `false` to stop.
+ */
 typedef bool (*ocpp_backend_foreach_cb_t)
 		(const struct ocpp_backend_message *msg, void *ctx);
 

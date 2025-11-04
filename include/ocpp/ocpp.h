@@ -40,7 +40,19 @@ struct ocpp_message;
 
 typedef void (*ocpp_event_callback_t)(ocpp_event_t event_type,
 		const struct ocpp_message *message, void *ctx);
-typedef void (*ocpp_iterate_cb_t)(const struct ocpp_message *msg, void *ctx);
+
+/**
+ * @brief Callback function type for iterating over OCPP messages.
+ *
+ * This callback is used to process each OCPP message during iteration.
+ * The function should return `true` to continue the iteration or `false`
+ * to stop it.
+ *
+ * @param[in] msg Pointer to the current OCPP message being processed.
+ * @param[in] ctx User-defined context passed to the callback.
+ * @return `true` to continue iteration, `false` to stop.
+ */
+typedef bool (*ocpp_iterate_cb_t)(const struct ocpp_message *msg, void *ctx);
 
 /**
  * @brief Initializes the OCPP module.

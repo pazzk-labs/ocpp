@@ -8,6 +8,7 @@
 #include "ocpp/list.h"
 #include "ocpp/strconv.h"
 
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 #include <time.h>
@@ -32,6 +33,11 @@
 
 struct ocpp_backend {
 	struct ocpp_backend_api api;
+};
+
+struct backend_foreach_ctx {
+	ocpp_iterate_cb_t user_cb;
+	void *user_ctx;
 };
 
 /* NOTE: Messages sent to the backend must be flat, but the payload of messages
@@ -732,6 +738,13 @@ static int process_backend_messages(const time_t *now,
 	return -ENOENT;
 }
 
+static bool
+on_backend_foreach(const struct ocpp_backend_message *msg, void *ctx)
+{
+	struct backend_foreach_ctx *p = (struct backend_foreach_ctx *)ctx;
+	return p->user_cb((struct ocpp_message *)msg, p->user_ctx);
+}
+
 ocpp_message_t ocpp_get_type_from_idstr(const char *idstr)
 {
 	const struct message *req = NULL;
@@ -764,6 +777,11 @@ size_t ocpp_count_pending_requests(void)
 	return count;
 }
 
+size_t ocpp_count_stored_requests(void)
+{
+	return count_backend_messages();
+}
+
 void ocpp_iterate_pending_requests(ocpp_iterate_cb_t cb, void *ctx)
 {
 	ocpp_lock();
@@ -789,6 +807,20 @@ void ocpp_iterate_pending_requests(ocpp_iterate_cb_t cb, void *ctx)
 		}
 	}
 	ocpp_unlock();
+}
+
+void ocpp_iterate_stored_requests(ocpp_iterate_cb_t cb, void *ctx)
+{
+	if (!m.backend || !m.backend->api.foreach) {
+		return;
+	}
+
+	struct backend_foreach_ctx args = {
+		.user_cb = cb,
+		.user_ctx = ctx,
+	};
+
+	m.backend->api.foreach(m.backend, on_backend_foreach, &args);
 }
 
 int ocpp_set_message_header(struct ocpp_message *msg,
