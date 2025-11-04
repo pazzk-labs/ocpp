@@ -476,7 +476,7 @@ static void send_message(struct message *msg, const time_t *now)
 		}
 	} else {
 		if (msg->body.data.header.type == OCPP_MSG_BOOTNOTIFICATION ||
-				msg->attempts <= OCPP_DEFAULT_TX_RETRIES ||
+				msg->attempts < OCPP_DEFAULT_TX_RETRIES ||
 				is_transaction_related(msg)) {
 			put_msg_wait(msg);
 			return;

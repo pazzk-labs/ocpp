@@ -53,7 +53,6 @@ int ocpp_recv(struct ocpp_message *msg) {
 				.getPointerValue(), payload_size);
 	}
 
-
         return rc;
 }
 
@@ -181,6 +180,11 @@ TEST(Core, step_ShouldDropMessage_WhenFailedSendingMoreThanRetries) {
 	mock().expectOneCall("time").andReturnValue(1);
 	LONGS_EQUAL(0, ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), NULL));
 
+	mock().expectOneCall("on_ocpp_event")
+		.withParameter("event_type", OCPP_EVENT_MESSAGE_FREE)
+		.withParameter("type", OCPP_MSG_AUTHORIZE)
+		.withParameter("role", OCPP_MSG_ROLE_CALL)
+		.ignoreOtherParameters();
 	// Should send 2 times (OCPP_DEFAULT_TX_RETRIES=2 means 2 retries)
 	for (int i = 0; i < 2; i++) {
 		mock().expectOneCall("ocpp_send")
@@ -189,20 +193,7 @@ TEST(Core, step_ShouldDropMessage_WhenFailedSendingMoreThanRetries) {
 			.ignoreOtherParameters().andReturnValue(-ENOMSG);
 		step(10 + i * 10);
 	}
-
-	// After max retries, message should be dropped
-	mock().expectOneCall("on_ocpp_event")
-		.withParameter("event_type", OCPP_EVENT_MESSAGE_FREE)
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.withParameter("role", OCPP_MSG_ROLE_CALL)
-		.ignoreOtherParameters();
-	mock().expectOneCall("ocpp_recv")
-		.ignoreOtherParameters().andReturnValue(-ENOMSG);
-	step(50);
-
-	// Verify message was dropped
-	size_t pending = ocpp_count_pending_requests();
-	LONGS_EQUAL(0, pending);
+	LONGS_EQUAL(0, ocpp_count_pending_requests());
 }
 
 TEST(Core, ShouldNeverSendHeartBeat_WhenBootNotificationNotAccepted) {
@@ -340,7 +331,6 @@ TEST(Core, ShouldDropTransactionRelatedMessages_WhenServerReponsesWithErrorMoreT
 	step(current_interval);
 
 	LONGS_EQUAL(0, ocpp_count_pending_requests());
-	return;
 }
 
 TEST(Core, ShouldSendTransactionRelatedmessagesIndefinitely_WhenTransportErrors) {
@@ -428,19 +418,14 @@ TEST(Core, ShouldDropNonTransactionRelatedMessagesAfterTimeout_WhenTransportErro
 		.withParameter("type", OCPP_MSG_AUTHORIZE)
 		.ignoreOtherParameters().andReturnValue(-EIO);
 	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
-	step(10);
-
-	// After max retries exhausted, message is dropped at time 17
 	mock().expectOneCall("on_ocpp_event")
 		.withParameter("event_type", OCPP_EVENT_MESSAGE_FREE)
 		.withParameter("type", OCPP_MSG_AUTHORIZE)
 		.withParameter("role", OCPP_MSG_ROLE_CALL)
 		.withParameter("msg_pair", false);
-	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
-	step(17);
+	step(10);
 
-	size_t pending = ocpp_count_pending_requests();
-	LONGS_EQUAL(0, pending);
+	LONGS_EQUAL(0, ocpp_count_pending_requests());
 }
 
 TEST(Core, ShouldSendBootNotification_WhenRequested) {
