@@ -935,7 +935,7 @@ size_t ocpp_get_message_payload_size(const struct ocpp_message *msg)
 void *ocpp_get_message_user_ctx(const struct ocpp_message *msg)
 {
 	if (msg) {
-		return (void *)(uintptr_t)msg->data.header.custom;
+		return (void *)msg->data.header.custom;
 	}
 	return NULL;
 }

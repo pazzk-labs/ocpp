@@ -230,8 +230,10 @@ int ocpp_copy_payload(struct ocpp_message *msg,
  * @param[out] buf      Buffer to store the payload data.
  * @param[in]  bufsize  Size of the buffer in bytes.
  *
- * @return Number of bytes copied on success, or a negative error code
- *         (-EINVAL if parameters are invalid, -ENODATA if no payload exists).
+ * @return Number of bytes copied on success, or a negative error code:
+ *         -EINVAL if parameters are invalid,
+ *         -ENOSPC if the buffer is too small,
+ *         -ENOENT if no payload exists.
  */
 int ocpp_read_payload(const struct ocpp_message *msg,
 		void *buf, size_t bufsize);

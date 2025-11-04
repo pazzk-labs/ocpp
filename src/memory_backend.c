@@ -140,9 +140,9 @@ static int do_clear(struct ocpp_backend *self) {
 
 static size_t do_count(struct ocpp_backend *self) {
 	size_t cnt = 0;
-	pthread_mutex_lock((pthread_mutex_t *)&self->mutex);
+	pthread_mutex_lock(&self->mutex);
 	cnt = (size_t)list_count(&self->list);
-	pthread_mutex_unlock((pthread_mutex_t *)&self->mutex);
+	pthread_mutex_unlock(&self->mutex);
 	return cnt;
 }
 
@@ -200,5 +200,6 @@ void ocpp_memory_backend_destroy(struct ocpp_backend *backend)
 		return;
 	}
 	do_clear(backend);
+	pthread_mutex_destroy(&backend->mutex);
 	free(backend);
 }
