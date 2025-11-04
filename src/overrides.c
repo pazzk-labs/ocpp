@@ -12,3 +12,10 @@ void __attribute__((weak)) ocpp_generate_message_id(void *buf, size_t bufsize)
 {
 	snprintf(buf, bufsize, "%lu", time(NULL));
 }
+
+bool __attribute__((weak))
+ocpp_is_message_droppable(const struct ocpp_message *msg)
+{
+	(void)msg;
+	return true;
+}

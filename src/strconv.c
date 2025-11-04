@@ -11,6 +11,63 @@
 #define ARRAY_COUNT(x)		(sizeof(x) / sizeof((x)[0]))
 #endif
 
+static const char **get_typestr_array(void)
+{
+	static const char *msgstr[] = {
+		[OCPP_MSG_AUTHORIZE] = "Authorize",
+		[OCPP_MSG_BOOTNOTIFICATION] = "BootNotification",
+		[OCPP_MSG_CHANGE_AVAILABILITY] = "ChangeAvailability",
+		[OCPP_MSG_CHANGE_CONFIGURATION] = "ChangeConfiguration",
+		[OCPP_MSG_CLEAR_CACHE] = "ClearCache",
+		[OCPP_MSG_DATA_TRANSFER] = "DataTransfer",
+		[OCPP_MSG_GET_CONFIGURATION] = "GetConfiguration",
+		[OCPP_MSG_HEARTBEAT] = "Heartbeat",
+		[OCPP_MSG_METER_VALUES] = "MeterValues",
+		[OCPP_MSG_REMOTE_START_TRANSACTION] = "RemoteStartTransaction",
+		[OCPP_MSG_REMOTE_STOP_TRANSACTION] = "RemoteStopTransaction",
+		[OCPP_MSG_RESET] = "Reset",
+		[OCPP_MSG_START_TRANSACTION] = "StartTransaction",
+		[OCPP_MSG_STATUS_NOTIFICATION] = "StatusNotification",
+		[OCPP_MSG_STOP_TRANSACTION] = "StopTransaction",
+		[OCPP_MSG_UNLOCK_CONNECTOR] = "UnlockConnector",
+		[OCPP_MSG_DIAGNOSTICS_NOTIFICATION] =
+			"DiagnosticsStatusNotification",
+		[OCPP_MSG_FIRMWARE_NOTIFICATION] = "FirmwareStatusNotification",
+		[OCPP_MSG_GET_DIAGNOSTICS] = "GetDiagnostics",
+		[OCPP_MSG_UPDATE_FIRMWARE] = "UpdateFirmware",
+		[OCPP_MSG_GET_LOCAL_LIST_VERSION] = "GetLocalListVersion",
+		[OCPP_MSG_SEND_LOCAL_LIST] = "SendLocalList",
+		[OCPP_MSG_CANCEL_RESERVATION] = "CancelReservation",
+		[OCPP_MSG_RESERVE_NOW] = "ReserveNow",
+		[OCPP_MSG_CLEAR_CHARGING_PROFILE] = "ClearChargingProfile",
+		[OCPP_MSG_GET_COMPOSITE_SCHEDULE] = "GetCompositeSchedule",
+		[OCPP_MSG_SET_CHARGING_PROFILE] = "SetChargingProfile",
+		[OCPP_MSG_TRIGGER_MESSAGE] = "TriggerMessage",
+		[OCPP_MSG_CERTIFICATE_SIGNED] = "CertificateSigned",
+		[OCPP_MSG_DELETE_CERTIFICATE] = "DeleteCertificate",
+		[OCPP_MSG_EXTENDED_TRIGGER_MESSAGE] = "ExtendedTriggerMessage",
+		[OCPP_MSG_GET_INSTALLED_CERTIFICATE_IDS] =
+			"GetInstalledCertificateIds",
+		[OCPP_MSG_GET_LOG] = "GetLog",
+		[OCPP_MSG_INSTALL_CERTIFICATE] = "InstallCertificate",
+		[OCPP_MSG_LOG_STATUS_NOTIFICATION] = "LogStatusNotification",
+		[OCPP_MSG_SECURITY_EVENT_NOTIFICATION] =
+			"SecurityEventNotification",
+		[OCPP_MSG_SIGN_CERTIFICATE] = "SignCertificate",
+		[OCPP_MSG_SIGNED_FIRMWARE_STATUS_NOTIFICATION] =
+			"SignedFirmwareStatusNotification",
+		[OCPP_MSG_SIGNED_UPDATE_FIRMWARE] = "SignedUpdateFirmware",
+	};
+
+	return msgstr;
+}
+
+const char *ocpp_stringify_type(ocpp_message_t msgtype)
+{
+	const char **msgstr = get_typestr_array();
+	return msgtype >= OCPP_MSG_MAX? "UnknownMessage" : msgstr[msgtype];
+}
+
 const char *ocpp_stringify_comm_status(ocpp_comm_status_t status)
 {
 	const char *tbl[] = {
@@ -251,6 +308,19 @@ const char *ocpp_stringify_charging_unit(ocpp_charging_unit_t unit)
 	};
 
 	return tbl[unit];
+}
+
+ocpp_message_t ocpp_get_type_from_string(const char *typestr)
+{
+	const char **msgstr = get_typestr_array();
+
+	for (uint32_t i = 0; i < OCPP_MSG_MAX; i++) {
+		if (strcmp(typestr, msgstr[i]) == 0) {
+			return (ocpp_message_t)i;
+		}
+	}
+
+	return OCPP_MSG_MAX;
 }
 
 ocpp_measurand_t ocpp_get_measurand_from_string(const char *str,

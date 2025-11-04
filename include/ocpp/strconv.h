@@ -13,6 +13,15 @@ extern "C" {
 
 #include "ocpp/type.h"
 
+/**
+ * @brief Converts an OCPP message type to its string representation.
+ *
+ * @param[in] msgtype The OCPP message type to be converted.
+ *
+ * @return A constant character pointer to the string representation of the
+ * message type.
+ */
+const char *ocpp_stringify_type(ocpp_message_t msgtype);
 const char *ocpp_stringify_comm_status(ocpp_comm_status_t status);
 const char *ocpp_stringify_error(ocpp_error_t err);
 const char *ocpp_stringify_status(ocpp_status_t status);
@@ -29,6 +38,14 @@ const char *ocpp_stringify_unit(ocpp_measure_unit_t unit);
 const char *ocpp_stringify_measurand(ocpp_measurand_t measurand);
 const char *ocpp_stringify_charging_unit(ocpp_charging_unit_t unit);
 
+/**
+ * @brief Get message type from message type string
+ *
+ * @param[in] typestr The string representation of the OCPP message type.
+ *
+ * @return Type of message. `OCPP_MSG_MAX` if no matching found.
+ */
+ocpp_message_t ocpp_get_type_from_string(const char *typestr);
 /**
  * @brief Converts a string to an ocpp_measurand_t enum value.
  *
