@@ -1089,7 +1089,8 @@ int ocpp_init(struct ocpp_backend *backend,
 
 void ocpp_deinit(void)
 {
-	struct list *p, *n;
+	struct list *p;
+	struct list *n;
 
 	ocpp_lock();
 

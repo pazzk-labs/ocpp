@@ -155,9 +155,7 @@ static int do_foreach(struct ocpp_backend *self,
 	list_for_each_safe(p, n, &self->list) {
 		const struct msg_container *container =
 			list_entry(p, struct msg_container, link);
-		pthread_mutex_unlock(&self->mutex);
 		bool stop = !(*cb)(&container->msg, cb_ctx);
-		pthread_mutex_lock(&self->mutex);
 		if (stop) {
 			rc = -EINTR;
 			break;

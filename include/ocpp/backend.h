@@ -17,7 +17,7 @@ struct ocpp_backend_message_header {
 	char id[OCPP_MESSAGE_ID_MAXLEN];
 	uint8_t role; /* ocpp_message_role_t */
 	uint8_t type; /* ocpp_message_t */
-	uint8_t padding;
+	uint8_t padding; /* for alignment */
 	int64_t timestamp;
 #if __SIZEOF_POINTER__ == 8
 	uint64_t custom; /* user custom data */
