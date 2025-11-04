@@ -315,7 +315,7 @@ ocpp_message_t ocpp_get_type_from_string(const char *typestr)
 	const char **msgstr = get_typestr_array();
 
 	for (uint32_t i = 0; i < OCPP_MSG_MAX; i++) {
-		if (strcmp(typestr, msgstr[i]) == 0) {
+		if (msgstr[i] && strcmp(typestr, msgstr[i]) == 0) {
 			return (ocpp_message_t)i;
 		}
 	}

@@ -43,17 +43,6 @@ int ocpp_send(const struct ocpp_message *msg);
 int ocpp_recv(struct ocpp_message *msg);
 
 /**
- * @brief Determines whether a given OCPP message should be dropped.
- *
- * This function evaluates the provided OCPP message and decides if it
- * should be discarded based on specific criteria.
- *
- * @param[in] msg Pointer to the OCPP message to be evaluated.
- * @return true if the message should be dropped, false otherwise.
- */
-bool ocpp_is_message_droppable(const struct ocpp_message *msg);
-
-/**
  * @brief Generates a unique message ID.
  *
  * This function generates a unique message ID for an OCPP message. The

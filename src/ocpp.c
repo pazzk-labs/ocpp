@@ -242,8 +242,8 @@ static void free_message(struct message *msg, bool notify)
 
 	if (msg->stored) {
 		ocpp_unlock();
-                /* the first one must be the msg. foreach is not used here to
-                 * avoid latency and complexity. */
+		/* the first one must be the msg. foreach is not used here to
+		 * avoid latency and complexity. */
 		m.backend->api.drop(m.backend, 1);
 		ocpp_lock();
 	}
@@ -319,7 +319,7 @@ static int push_message(const char *id, ocpp_message_t type,
 		time_t timer, list_add_func_t f, bool err, void *ctx)
 {
 	struct message *msg = new_message(id, type, err, ctx);
-	uint8_t *payload;
+	uint8_t *payload = NULL;
 
 	if (!msg) {
 		return -ENOMEM;
@@ -359,7 +359,7 @@ static int push_message_backend(const char *id, ocpp_message_t type,
 		memcpy(msg->payload, data, datasize);
 	}
 
-        /* FIXME: When pushing to the front, if there are already pending
+	/* FIXME: When pushing to the front, if there are already pending
 	 * messages, the new message should be inserted after the pending ones
 	 * to maintain the correct order. */
 	int err = preemptive?
@@ -394,9 +394,7 @@ static bool should_drop(struct message *msg)
 {
 	const uint32_t max_attempts = OCPP_DEFAULT_TX_RETRIES;
 
-	if (!is_droppable(msg) ||
-			msg->attempts < max_attempts ||
-			!ocpp_is_message_droppable(&msg->body)) {
+	if (!is_droppable(msg) || msg->attempts < max_attempts) {
 		return false;
 	}
 
