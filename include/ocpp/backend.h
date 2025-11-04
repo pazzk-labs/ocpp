@@ -19,7 +19,13 @@ struct ocpp_backend_message_header {
 	uint8_t type; /* ocpp_message_t */
 	uint8_t padding;
 	int64_t timestamp;
+#if __SIZEOF_POINTER__ == 8
+	uint64_t custom; /* user custom data */
+#elif __SIZEOF_POINTER__ == 4
 	uint32_t custom; /* user custom data */
+#else
+#error "Unsupported pointer size"
+#endif
 } __attribute__((packed));
 
 struct ocpp_backend_message {

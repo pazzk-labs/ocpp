@@ -54,10 +54,11 @@ static int do_push_front(struct ocpp_backend *self,
 
 static int do_pop(struct ocpp_backend *self,
 		struct ocpp_backend_message *buf, size_t bufsize) {
+	pthread_mutex_lock(&self->mutex);
 	if (list_empty(&self->list)) {
+		pthread_mutex_unlock(&self->mutex);
 		return -ENOENT;
 	}
-	pthread_mutex_lock(&self->mutex);
 	struct msg_container *container = list_entry(list_first(&self->list),
 			struct msg_container, link);
 	if (bufsize < sizeof(struct ocpp_backend_message) +
@@ -75,10 +76,11 @@ static int do_pop(struct ocpp_backend *self,
 
 static int do_peek(struct ocpp_backend *self,
 		struct ocpp_backend_message *buf, size_t bufsize) {
+	pthread_mutex_lock(&self->mutex);
 	if (list_empty(&self->list)) {
+		pthread_mutex_unlock(&self->mutex);
 		return -ENOENT;
 	}
-	pthread_mutex_lock(&self->mutex);
 	struct msg_container *container = list_entry(list_first(&self->list),
 			struct msg_container, link);
 	if (bufsize < sizeof(struct ocpp_backend_message)) {
@@ -92,10 +94,11 @@ static int do_peek(struct ocpp_backend *self,
 
 static int do_peek_payload(struct ocpp_backend *self,
 		uint8_t *buf, size_t bufsize) {
+	pthread_mutex_lock(&self->mutex);
 	if (list_empty(&self->list)) {
+		pthread_mutex_unlock(&self->mutex);
 		return -ENOENT;
 	}
-	pthread_mutex_lock(&self->mutex);
 	struct msg_container *container = list_entry(list_first(&self->list),
 			struct msg_container, link);
 	if (bufsize < container->msg.payload_size) {

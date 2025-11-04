@@ -101,56 +101,56 @@ static void put_msg_ready_infront(struct message *msg)
 {
 	add_first_to_list(msg, &m.tx.ready);
 	OCPP_DEBUG("%s pushed in front to ready list",
-			ocpp_stringify_type(msg->body.type));
+			ocpp_stringify_type(msg->body.data.header.type));
 }
 
 static void put_msg_ready(struct message *msg)
 {
 	add_last_to_list(msg, &m.tx.ready);
 	OCPP_DEBUG("%s pushed to ready list",
-			ocpp_stringify_type(msg->body.type));
+			ocpp_stringify_type(msg->body.data.header.type));
 }
 
 static void put_msg_wait(struct message *msg)
 {
 	add_last_to_list(msg, &m.tx.wait);
 	OCPP_DEBUG("%s pushed to wait list",
-			ocpp_stringify_type(msg->body.type));
+			ocpp_stringify_type(msg->body.data.header.type));
 }
 
 static void put_msg_timer(struct message *msg)
 {
 	add_last_to_list(msg, &m.tx.timer);
 	OCPP_DEBUG("%s pushed to timer list",
-			ocpp_stringify_type(msg->body.type));
+			ocpp_stringify_type(msg->body.data.header.type));
 }
 
 static void put_msg_dead(struct message *msg)
 {
 	add_first_to_list(msg, &m.tx.dead);
 	OCPP_DEBUG("%s pushed to dead list",
-			ocpp_stringify_type(msg->body.type));
+			ocpp_stringify_type(msg->body.data.header.type));
 }
 
 static void del_msg_ready(struct message *msg)
 {
 	del_from_list(msg, &m.tx.ready);
 	OCPP_DEBUG("%s removed from ready list",
-			ocpp_stringify_type(msg->body.type));
+			ocpp_stringify_type(msg->body.data.header.type));
 }
 
 static void del_msg_wait(struct message *msg)
 {
 	del_from_list(msg, &m.tx.wait);
 	OCPP_DEBUG("%s removed from wait list",
-			ocpp_stringify_type(msg->body.type));
+			ocpp_stringify_type(msg->body.data.header.type));
 }
 
 static void del_msg_timer(struct message *msg)
 {
 	del_from_list(msg, &m.tx.timer);
 	OCPP_DEBUG("%s removed from timer list",
-			ocpp_stringify_type(msg->body.type));
+			ocpp_stringify_type(msg->body.data.header.type));
 }
 
 static int count_messages_waiting(void)
@@ -464,7 +464,7 @@ static void send_message(struct message *msg, const time_t *now)
 	del_msg_ready(msg);
 
 	OCPP_INFO("tx: %s.req (%d/%d) waiting up to %lu seconds",
-			ocpp_stringify_type(msg->body.type),
+			ocpp_stringify_type(msg->body.data.header.type),
 			msg->attempts, OCPP_DEFAULT_TX_RETRIES,
 			(unsigned long)(msg->expiry - *now));
 
@@ -499,12 +499,12 @@ static void process_tx_timeout(const time_t *now)
 		del_msg_wait(msg);
 
 		if (should_drop(msg)) {
-			OCPP_INFO("Dropping message %s",
-					ocpp_stringify_type(msg->body.type));
+			OCPP_INFO("Dropping message %s", ocpp_stringify_type(
+					msg->body.data.header.type));
 			free_message(msg, true);
 		} else {
-			OCPP_INFO("Retrying message %s",
-					ocpp_stringify_type(msg->body.type));
+			OCPP_INFO("Retrying message %s", ocpp_stringify_type(
+					msg->body.data.header.type));
 			put_msg_ready_infront(msg);
 		}
 	}
@@ -576,7 +576,7 @@ static int process_timer_messages(const time_t *now)
 static void process_central_request(const struct ocpp_message *r)
 {
 	(void)r;
-	OCPP_INFO("rx: %s.req", ocpp_stringify_type(received->data.header.type));
+	OCPP_INFO("rx: %s.req", ocpp_stringify_type(r->data.header.type));
 }
 
 static bool process_central_response_error(const struct ocpp_message *r,
@@ -598,7 +598,7 @@ static bool process_central_response_error(const struct ocpp_message *r,
 		put_msg_wait(req);
 
 		OCPP_INFO("%s will be sent again at %lu (%d/%d)",
-				ocpp_stringify_type(req->body.type),
+				ocpp_stringify_type(req->body.data.header.type),
 				(unsigned long)req->expiry,
 				req->attempts, max_attempts);
 		return false;
@@ -636,7 +636,7 @@ static int process_central_response(const struct ocpp_message *r,
 
 	if (req == NULL) {
 		OCPP_ERROR("No matching request for response %s",
-				ocpp_stringify_type(received->type));
+				ocpp_stringify_type(r->data.header.type));
 		return -ENOLINK;
 	}
 
