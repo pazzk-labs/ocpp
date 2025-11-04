@@ -62,7 +62,7 @@ struct ocpp_backend_api {
 			uint8_t *buf, size_t bufsize);
 	int (*drop)(struct ocpp_backend *self, size_t nr_msgs);
 	int (*clear)(struct ocpp_backend *self);
-	size_t (*count)(const struct ocpp_backend *self);
+	size_t (*count)(struct ocpp_backend *self);
 	int (*foreach)(struct ocpp_backend *self,
 			ocpp_backend_foreach_cb_t cb, void *cb_ctx);
 };

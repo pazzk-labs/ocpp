@@ -220,6 +220,19 @@ int ocpp_set_message_header(struct ocpp_message *msg,
 int ocpp_copy_payload(struct ocpp_message *msg,
 		const void *data, size_t datasize);
 
+/**
+ * @brief Reads the payload from an OCPP message.
+ *
+ * This function copies the payload data from the specified OCPP message
+ * into the provided buffer.
+ *
+ * @param[in]  msg      Pointer to the OCPP message to read from.
+ * @param[out] buf      Buffer to store the payload data.
+ * @param[in]  bufsize  Size of the buffer in bytes.
+ *
+ * @return Number of bytes copied on success, or a negative error code
+ *         (-EINVAL if parameters are invalid, -ENODATA if no payload exists).
+ */
 int ocpp_read_payload(const struct ocpp_message *msg,
 		void *buf, size_t bufsize);
 

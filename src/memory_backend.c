@@ -81,8 +81,8 @@ static int do_peek(struct ocpp_backend *self,
 		pthread_mutex_unlock(&self->mutex);
 		return -ENOENT;
 	}
-	struct msg_container *container = list_entry(list_first(&self->list),
-			struct msg_container, link);
+	const struct msg_container *container =
+		list_entry(list_first(&self->list), struct msg_container, link);
 	if (bufsize < sizeof(struct ocpp_backend_message)) {
 		pthread_mutex_unlock(&self->mutex);
 		return -ENOSPC;
@@ -99,8 +99,8 @@ static int do_peek_payload(struct ocpp_backend *self,
 		pthread_mutex_unlock(&self->mutex);
 		return -ENOENT;
 	}
-	struct msg_container *container = list_entry(list_first(&self->list),
-			struct msg_container, link);
+	const struct msg_container *container =
+		list_entry(list_first(&self->list), struct msg_container, link);
 	if (bufsize < container->msg.payload_size) {
 		pthread_mutex_unlock(&self->mutex);
 		return -ENOSPC;
@@ -138,7 +138,7 @@ static int do_clear(struct ocpp_backend *self) {
 	return 0;
 }
 
-static size_t do_count(const struct ocpp_backend *self) {
+static size_t do_count(struct ocpp_backend *self) {
 	size_t cnt = 0;
 	pthread_mutex_lock((pthread_mutex_t *)&self->mutex);
 	cnt = (size_t)list_count(&self->list);
@@ -153,7 +153,7 @@ static int do_foreach(struct ocpp_backend *self,
 	struct list *n;
 	pthread_mutex_lock(&self->mutex);
 	list_for_each_safe(p, n, &self->list) {
-		struct msg_container *container =
+		const struct msg_container *container =
 			list_entry(p, struct msg_container, link);
 		pthread_mutex_unlock(&self->mutex);
 		bool stop = !(*cb)(&container->msg, cb_ctx);

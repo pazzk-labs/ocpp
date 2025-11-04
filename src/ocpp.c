@@ -330,7 +330,7 @@ static int push_message(const char *id, ocpp_message_t type,
 	if (!msg) {
 		return -ENOMEM;
 	}
-	if (datasize && !(payload = (uint8_t *)malloc(datasize))) {
+	if (data && datasize && !(payload = (uint8_t *)malloc(datasize))) {
 		free_message(msg, false);
 		return -ENOMEM;
 	}
@@ -667,7 +667,7 @@ static int process_incoming_messages(const time_t *now)
 	/* allocate extra space for payload pointer */
 	uint8_t buf[sizeof(struct ocpp_message) + sizeof(void *)] = { 0, };
 	struct ocpp_message *r = (struct ocpp_message *)buf;
-	struct ocpp_backend_message_header *h = &r->data.header;
+	const struct ocpp_backend_message_header *h = &r->data.header;
 
 	ocpp_unlock();
 	int err = ocpp_recv(r);
@@ -708,8 +708,7 @@ out:
 	return err;
 }
 
-static int process_backend_messages(const time_t *now,
-		size_t nr_msg_stored, size_t nr_msg_pending)
+static int process_backend_messages(size_t nr_msg_stored, size_t nr_msg_pending)
 {
 	if (nr_msg_stored == 0 || nr_msg_pending) {
 		return -EBUSY;
@@ -720,7 +719,7 @@ static int process_backend_messages(const time_t *now,
 		struct message *msg = new_message(h.header.id,
 				h.header.type,
 				h.header.role == OCPP_MSG_ROLE_CALLERROR,
-				(void *)(uintptr_t)h.header.custom);
+				(void *)h.header.custom);
 		if (!msg) {
 			return -ENOMEM;
 		}
@@ -742,7 +741,7 @@ static bool
 on_backend_foreach(const struct ocpp_backend_message *msg, void *ctx)
 {
 	struct backend_foreach_ctx *p = (struct backend_foreach_ctx *)ctx;
-	return p->user_cb((struct ocpp_message *)msg, p->user_ctx);
+	return p->user_cb((const struct ocpp_message *)msg, p->user_ctx);
 }
 
 ocpp_message_t ocpp_get_type_from_idstr(const char *idstr)
@@ -887,7 +886,7 @@ int ocpp_read_payload(const struct ocpp_message *msg,
 		return 0;
 	}
 
-	struct message *p = container_of(msg, struct message, body);
+	const struct message *p = container_of(msg, struct message, body);
 
 	if (!is_payload_ptr_null(msg)) {
 		memcpy(buf, get_payload_ptr(msg), msg->data.payload_size);
@@ -1032,7 +1031,7 @@ int ocpp_step(void)
 	}
 	ocpp_unlock();
 
-	process_backend_messages(&now, nr_msg_stored, nr_msg_pending);
+	process_backend_messages(nr_msg_stored, nr_msg_pending);
 
 	ocpp_lock();
 	{
