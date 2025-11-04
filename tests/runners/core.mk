@@ -4,6 +4,8 @@ COMPONENT_NAME = Core
 
 SRC_FILES = \
 	../src/ocpp.c \
+	../src/memory_backend.c \
+	../src/strconv.c \
 	../src/core/configuration.c \
 	../examples/messages.c \
 

@@ -70,6 +70,7 @@ typedef bool (*ocpp_iterate_cb_t)(const struct ocpp_message *msg, void *ctx);
  */
 int ocpp_init(struct ocpp_backend *backend,
 		ocpp_event_callback_t cb, void *cb_ctx);
+void ocpp_deinit(void);
 
 /**
  * @brief Executes a single step of the OCPP state machine.

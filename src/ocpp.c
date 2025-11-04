@@ -168,7 +168,7 @@ static int count_messages_ready(void)
 	return list_count(&m.tx.ready);
 }
 
-static int count_backend_messages(void)
+static size_t count_backend_messages(void)
 {
 	if (m.backend && m.backend->api.count) {
 		return m.backend->api.count(m.backend);
@@ -273,24 +273,25 @@ static void clear_dead_messages(void)
 }
 
 static void set_header(struct ocpp_backend_message_header *header,
-		ocpp_message_t type, const char *id, bool err, void *ctx)
+		ocpp_message_t type, const char *id,
+		time_t ts, bool err, void *ctx)
 {
-	header->type = type;
-	header->timestamp = time(NULL);
+	header->type = (uint8_t)type;
+	header->timestamp = ts;
 	header->custom = (uintptr_t)ctx;
 
 	if (id) {
 		header->role = err?
 			OCPP_MSG_ROLE_CALLERROR : OCPP_MSG_ROLE_CALLRESULT;
-		strncpy(header->id, id, sizeof(header->id) - 1);
+		memcpy(header->id, id, sizeof(header->id));
 	} else {
 		header->role = OCPP_MSG_ROLE_CALL;
-		ocpp_generate_message_id(header->id, sizeof(header->id));
+		ocpp_generate_message_id(header->id, sizeof(header->id) - 1);
 	}
 }
 
 static struct message *new_message(const char *id,
-		ocpp_message_t type, bool err, void *ctx)
+		ocpp_message_t type, time_t ts, bool err, void *ctx)
 {
 	struct message *msg = alloc_message();
 
@@ -298,7 +299,7 @@ static struct message *new_message(const char *id,
 		return NULL;
 	}
 
-	set_header(&msg->body.data.header, type, id, err, ctx);
+	set_header(&msg->body.data.header, type, id, ts, err, ctx);
 	set_payload_ptr(&msg->body, NULL, 0);
 	msg->attempts = 0;
 
@@ -321,10 +322,10 @@ static struct message *find_msg_by_idstr(struct list *list_head,
 }
 
 static int push_message(const char *id, ocpp_message_t type,
-		const void *data, size_t datasize,
+		const void *data, size_t datasize, time_t ts,
 		time_t timer, list_add_func_t f, bool err, void *ctx)
 {
-	struct message *msg = new_message(id, type, err, ctx);
+	struct message *msg = new_message(id, type, ts, err, ctx);
 	uint8_t *payload = NULL;
 
 	if (!msg) {
@@ -358,8 +359,8 @@ static int push_message_backend(const char *id, ocpp_message_t type,
 		return -ENOMEM;
 	}
 
-	set_header(&msg->header, type, id, callerr, ctx);
-	msg->payload_size = datasize;
+	set_header(&msg->header, type, id, time(NULL), callerr, ctx);
+	msg->payload_size = (uint32_t)datasize;
 
 	if (data && datasize > 0) {
 		memcpy(msg->payload, data, datasize);
@@ -475,7 +476,7 @@ static void send_message(struct message *msg, const time_t *now)
 		}
 	} else {
 		if (msg->body.data.header.type == OCPP_MSG_BOOTNOTIFICATION ||
-				msg->attempts < OCPP_DEFAULT_TX_RETRIES ||
+				msg->attempts <= OCPP_DEFAULT_TX_RETRIES ||
 				is_transaction_related(msg)) {
 			put_msg_wait(msg);
 			return;
@@ -538,7 +539,7 @@ static int process_periodic_messages(const time_t *now, size_t nr_msg_stored)
 {
 	if (should_send_heartbeat(now) && !nr_msg_stored) {
 		struct message *msg = new_message(NULL,
-				OCPP_MSG_HEARTBEAT, false, NULL);
+				OCPP_MSG_HEARTBEAT, *now, false, NULL);
 
 		if (!msg) {
 			return -ENOMEM;
@@ -695,9 +696,10 @@ static int process_incoming_messages(const time_t *now)
 	dispatch_event(err, r);
 	clear_dead_messages();
 out:
-	if (err && err != -ENOENT && h->role == OCPP_MSG_ROLE_CALL) {
+	if (err && err != -ENOENT && err != -ENOMSG &&
+			h->role == OCPP_MSG_ROLE_CALL) {
 		/* Send CallError if the message could not be processed. */
-		push_message(h->id, h->type, NULL, 0, 0,
+		push_message(h->id, h->type, NULL, 0, *now, 0,
 				put_msg_ready, true, NULL);
 	}
 
@@ -718,6 +720,7 @@ static int process_backend_messages(size_t nr_msg_stored, size_t nr_msg_pending)
 	if (m.backend->api.peek(m.backend, &h, sizeof(h)) == 0) {
 		struct message *msg = new_message(h.header.id,
 				h.header.type,
+				h.header.timestamp,
 				h.header.role == OCPP_MSG_ROLE_CALLERROR,
 				(void *)h.header.custom);
 		if (!msg) {
@@ -778,7 +781,7 @@ size_t ocpp_count_pending_requests(void)
 
 size_t ocpp_count_stored_requests(void)
 {
-	return count_backend_messages();
+	return (size_t)count_backend_messages();
 }
 
 void ocpp_iterate_pending_requests(ocpp_iterate_cb_t cb, void *ctx)
@@ -833,8 +836,8 @@ int ocpp_set_message_header(struct ocpp_message *msg,
 		return -EINVAL;
 	}
 
-	msg->data.header.role = role;
-	msg->data.header.type = type;
+	msg->data.header.role = (uint8_t)role;
+	msg->data.header.type = (uint8_t)type;
 	msg->data.header.timestamp = time(NULL);
 
 	if (id) {
@@ -886,7 +889,12 @@ int ocpp_read_payload(const struct ocpp_message *msg,
 		return 0;
 	}
 
-	const struct message *p = container_of(msg, struct message, body);
+	union {
+		const struct ocpp_message *msg;
+		void *ptr;
+	} t = { .msg = msg };
+
+	const struct message *p = container_of(t.ptr, struct message, body);
 
 	if (!is_payload_ptr_null(msg)) {
 		memcpy(buf, get_payload_ptr(msg), msg->data.payload_size);
@@ -975,7 +983,7 @@ int ocpp_push_request_front(ocpp_message_t type,
 
 	ocpp_lock();
 	{
-		err = push_message(NULL, type, data, datasize,
+		err = push_message(NULL, type, data, datasize, time(NULL),
 				0, put_msg_ready_infront, false, ctx);
 	}
 	ocpp_unlock();
@@ -986,6 +994,7 @@ int ocpp_push_request_front(ocpp_message_t type,
 int ocpp_push_request_defer(ocpp_message_t type, const void *data,
 		size_t datasize, uint32_t timer_sec, void *ctx)
 {
+	const time_t t = time(NULL);
 	list_add_func_t f = put_msg_timer;
 	int err = 0;
 
@@ -995,8 +1004,8 @@ int ocpp_push_request_defer(ocpp_message_t type, const void *data,
 
 	ocpp_lock();
 	{
-		err = push_message(NULL, type, data, datasize,
-				time(NULL) + (time_t)timer_sec, f, 0, ctx);
+		err = push_message(NULL, type, data, datasize, t,
+				t + (time_t)timer_sec, f, 0, ctx);
 	}
 	ocpp_unlock();
 
@@ -1006,12 +1015,14 @@ int ocpp_push_request_defer(ocpp_message_t type, const void *data,
 int ocpp_push_response(const struct ocpp_message *req,
 		const void *data, size_t datasize, bool callerr, void *ctx)
 {
+	const time_t t = time(NULL);
 	int err = 0;
 
 	ocpp_lock();
 	{
 		err = push_message(req->data.header.id, req->data.header.type,
-				data, datasize, 0, put_msg_ready, callerr, ctx);
+				data, datasize, t, 0, put_msg_ready, callerr,
+				ctx);
 	}
 	ocpp_unlock();
 
@@ -1074,4 +1085,39 @@ int ocpp_init(struct ocpp_backend *backend,
 	ocpp_reset_configuration();
 
 	return 0;
+}
+
+void ocpp_deinit(void)
+{
+	struct list *p, *n;
+
+	ocpp_lock();
+
+	list_for_each_safe(p, n, &m.tx.ready) {
+		list_del(p, &m.tx.ready);
+		struct message *msg = container_of(p, struct message, link);
+		free_message(msg, false);
+	}
+
+	list_for_each_safe(p, n, &m.tx.wait) {
+		list_del(p, &m.tx.wait);
+		struct message *msg = container_of(p, struct message, link);
+		free_message(msg, false);
+	}
+
+	list_for_each_safe(p, n, &m.tx.timer) {
+		list_del(p, &m.tx.timer);
+		struct message *msg = container_of(p, struct message, link);
+		free_message(msg, false);
+	}
+
+	list_for_each_safe(p, n, &m.tx.dead) {
+		list_del(p, &m.tx.dead);
+		struct message *msg = container_of(p, struct message, link);
+		free_message(msg, false);
+	}
+
+	ocpp_unlock();
+
+	m.backend->api.clear(m.backend);
 }
