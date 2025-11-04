@@ -282,7 +282,7 @@ static void set_header(struct ocpp_backend_message_header *header,
 	if (id) {
 		header->role = err?
 			OCPP_MSG_ROLE_CALLERROR : OCPP_MSG_ROLE_CALLRESULT;
-		memcpy(header->id, id, sizeof(header->id));
+		strncpy(header->id, id, sizeof(header->id) - 1);
 	} else {
 		header->role = OCPP_MSG_ROLE_CALL;
 		ocpp_generate_message_id(header->id, sizeof(header->id));

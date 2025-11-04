@@ -65,7 +65,10 @@ static const char **get_typestr_array(void)
 const char *ocpp_stringify_type(ocpp_message_t msgtype)
 {
 	const char **msgstr = get_typestr_array();
-	return msgtype >= OCPP_MSG_MAX? "UnknownMessage" : msgstr[msgtype];
+	if (msgtype >= OCPP_MSG_MAX || msgstr[msgtype] == NULL) {
+		return "UnknownMessage";
+	}
+	return msgstr[msgtype];
 }
 
 const char *ocpp_stringify_comm_status(ocpp_comm_status_t status)
