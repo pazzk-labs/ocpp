@@ -114,6 +114,66 @@ TEST_GROUP(Core) {
                 ocpp_step();
         }
 
+	void expect_send_and_recv_response(ocpp_message_t type, ocpp_message_role_t resp_role,
+					   void *resp_payload, size_t resp_size, int at_time) {
+		mock().expectOneCall("ocpp_send")
+			.withParameter("type", type)
+			.withParameter("role", OCPP_MSG_ROLE_CALL)
+			.ignoreOtherParameters().andReturnValue(0);
+		mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
+		step(at_time);
+
+		if (resp_payload && resp_size > 0) {
+			mock().setData("expected_role", (int)resp_role);
+			mock().setData("expected_payload", resp_payload);
+			mock().setData("expected_payload_size", (int)resp_size);
+		}
+	}
+
+	void expect_event(ocpp_event_t event_type, ocpp_message_role_t role,
+			  ocpp_message_t type, bool msg_pair) {
+		mock().expectOneCall("on_ocpp_event")
+			.withParameter("event_type", event_type)
+			.withParameter("role", role)
+			.withParameter("type", type)
+			.withParameter("msg_pair", msg_pair);
+	}
+
+	void push_authorize(const char *tag, int at_time, void *ctx = NULL) {
+		struct ocpp_Authorize auth;
+		strncpy(auth.idTag, tag, sizeof(auth.idTag) - 1);
+		auth.idTag[sizeof(auth.idTag) - 1] = '\0';
+		mock().expectOneCall("time").andReturnValue(at_time);
+		ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), ctx);
+	}
+
+	void expect_send(ocpp_message_t type, int ret_val = 0) {
+		mock().expectOneCall("ocpp_send")
+			.withParameter("type", type)
+			.withParameter("role", OCPP_MSG_ROLE_CALL)
+			.ignoreOtherParameters().andReturnValue(ret_val);
+	}
+
+	void expect_send_any(int ret_val = 0) {
+		mock().expectOneCall("ocpp_send")
+			.ignoreOtherParameters().andReturnValue(ret_val);
+	}
+
+	void expect_recv(int ret_val = -ENOMSG) {
+		mock().expectOneCall("ocpp_recv")
+			.ignoreOtherParameters().andReturnValue(ret_val);
+	}
+
+	void expect_send_and_recv(ocpp_message_t type, int send_ret = 0, int recv_ret = -ENOMSG) {
+		expect_send(type, send_ret);
+		expect_recv(recv_ret);
+	}
+
+	void step_with_recv_only(int sec) {
+		expect_recv();
+		step(sec);
+	}
+
 	void go_boot_accepted(int sec, int interval = 10,  ocpp_boot_status_t status = OCPP_BOOT_STATUS_ACCEPTED) {
 		const struct ocpp_BootNotification boot = {
 			.chargePointModel = "Model",
@@ -162,10 +222,8 @@ TEST(Core, step_ShouldNeverDropBootNotification_WhenSendFailed) {
         ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), 0);
 
         for (int i = 0; i < 100; i++) {
-                mock().expectOneCall("ocpp_send")
-			.ignoreOtherParameters().andReturnValue(-1);
-                mock().expectOneCall("ocpp_recv")
-			.ignoreOtherParameters().andReturnValue(-ENOMSG);
+                expect_send_any(-1);
+                expect_recv();
                 step(interval*i);
         }
 }
@@ -173,24 +231,13 @@ TEST(Core, step_ShouldNeverDropBootNotification_WhenSendFailed) {
 TEST(Core, step_ShouldDropMessage_WhenFailedSendingMoreThanRetries) {
 	go_boot_accepted(0);
 
-	const struct ocpp_Authorize auth = {
-		.idTag = "TestTag123",
-	};
+	push_authorize("TestTag123", 1);
 
-	mock().expectOneCall("time").andReturnValue(1);
-	LONGS_EQUAL(0, ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), NULL));
-
-	mock().expectOneCall("on_ocpp_event")
-		.withParameter("event_type", OCPP_EVENT_MESSAGE_FREE)
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.withParameter("role", OCPP_MSG_ROLE_CALL)
-		.ignoreOtherParameters();
+	expect_event(OCPP_EVENT_MESSAGE_FREE, OCPP_MSG_ROLE_CALL, OCPP_MSG_AUTHORIZE, false);
 	// Should send 2 times (OCPP_DEFAULT_TX_RETRIES=2 means 2 retries)
 	for (int i = 0; i < 2; i++) {
-		mock().expectOneCall("ocpp_send")
-			.ignoreOtherParameters().andReturnValue(-1);
-		mock().expectOneCall("ocpp_recv")
-			.ignoreOtherParameters().andReturnValue(-ENOMSG);
+		expect_send_any(-1);
+		expect_recv();
 		step(10 + i * 10);
 	}
 	LONGS_EQUAL(0, ocpp_count_pending_requests());
@@ -202,13 +249,9 @@ TEST(Core, ShouldNeverSendHeartBeat_WhenBootNotificationNotAccepted) {
 
 	// No boot notification sent, so boot not accepted
 	// Should not send heartbeat even after interval
-	mock().expectOneCall("ocpp_recv")
-		.ignoreOtherParameters().andReturnValue(-ENOMSG);
-	step(interval + 10);
+	step_with_recv_only(interval + 10);
 
-	// Verify no heartbeat was sent (no ocpp_send call expected)
-	size_t pending = ocpp_count_pending_requests();
-	LONGS_EQUAL(0, pending);
+	LONGS_EQUAL(0, ocpp_count_pending_requests());
 }
 
 TEST(Core, step_ShouldSendHeartBeat_WhenNoMessageSentDuringHeartBeatInterval) {
@@ -217,16 +260,9 @@ TEST(Core, step_ShouldSendHeartBeat_WhenNoMessageSentDuringHeartBeatInterval) {
         int interval;
         ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), 0);
 
-	mock().expectOneCall("ocpp_recv")
-		.ignoreOtherParameters().andReturnValue(-ENOMSG);
-	step(interval - 1);
+	step_with_recv_only(interval - 1);
 
-	mock().expectOneCall("ocpp_send")
-		.withParameter("type", OCPP_MSG_HEARTBEAT)
-		.withParameter("role", OCPP_MSG_ROLE_CALL)
-		.ignoreOtherParameters().andReturnValue(0);
-	mock().expectOneCall("ocpp_recv")
-		.ignoreOtherParameters().andReturnValue(-ENOMSG);
+	expect_send_and_recv(OCPP_MSG_HEARTBEAT);
 	step(interval);
 }
 
@@ -237,30 +273,17 @@ TEST(Core, step_ShouldNotSendHeartBeat_WhenAnyMessageSentDuringHeartBeatInterval
 	ocpp_get_configuration("HeartbeatInterval", &interval, sizeof(interval), 0);
 
 	// Send another message just before heartbeat interval would trigger
-	const struct ocpp_Authorize auth = {
-		.idTag = "TestTag",
-	};
-	mock().expectOneCall("time").andReturnValue(interval - 2);
-	ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), NULL);
+	push_authorize("TestTag", interval - 2);
 
 	mock().setData("expected_role", (int)OCPP_MSG_ROLE_CALL);
-	mock().expectOneCall("ocpp_send")
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.withParameter("role", OCPP_MSG_ROLE_CALL)
-		.ignoreOtherParameters().andReturnValue(0);
-	mock().expectOneCall("ocpp_recv")
-		.ignoreOtherParameters().andReturnValue(-ENOMSG);
+	expect_send_and_recv(OCPP_MSG_AUTHORIZE);
 	step(interval - 1);
 
 	// At interval time, should not send heartbeat (message waiting blocks it)
 	// Only 2 seconds elapsed since send, still within TX timeout of 5 seconds
-	mock().expectOneCall("ocpp_recv")
-		.ignoreOtherParameters().andReturnValue(-ENOMSG);
-	step(1 + interval);
+	step_with_recv_only(1 + interval);
 
-	// Verify only authorize is pending, not heartbeat
-	size_t pending = ocpp_count_pending_requests();
-	LONGS_EQUAL(1, pending); // Only authorize waiting for response
+	LONGS_EQUAL(1, ocpp_count_pending_requests()); // Only authorize waiting
 }
 
 TEST(Core, ShouldDropTransactionRelatedMessages_WhenServerReponsesWithErrorMoreThanMaxAttemptsConfigured) {
@@ -346,83 +369,48 @@ TEST(Core, ShouldSendTransactionRelatedmessagesIndefinitely_WhenTransportErrors)
 
 	// Simulate transport errors many times
 	for (int i = 0; i < 50; i++) {
-		mock().expectOneCall("ocpp_send")
-			.ignoreOtherParameters().andReturnValue(-EIO);
-		mock().expectOneCall("ocpp_recv")
-			.ignoreOtherParameters().andReturnValue(-ENOMSG);
+		expect_send_any(-EIO);
+		expect_recv();
 		step(10 + i * 10);
 	}
 
-	// Message should still be pending (not dropped)
-	size_t pending = ocpp_count_pending_requests();
-	CHECK(pending > 0);
+	CHECK(ocpp_count_pending_requests() > 0); // Should still be pending
 }
 
 TEST(Core, ShouldDropNonTransactionRelatedMessagesAfterTimeout_WhenNoResponseReceived) {
 	go_boot_accepted(1);
 
-	const struct ocpp_Authorize auth = {
-		.idTag = "TestTag",
-	};
-
-	mock().expectOneCall("time").andReturnValue(2);
-	ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), NULL);
+	push_authorize("TestTag", 2);
 
 	// First send at time 3
-	mock().expectOneCall("ocpp_send")
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.ignoreOtherParameters().andReturnValue(0);
-	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
+	expect_send_and_recv(OCPP_MSG_AUTHORIZE);
 	step(3);
 
 	// Retry after TX timeout (5 seconds) at time 10
-	mock().expectOneCall("ocpp_send")
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.ignoreOtherParameters().andReturnValue(0);
-	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
+	expect_send_and_recv(OCPP_MSG_AUTHORIZE);
 	step(10);
 
-	// After second timeout (5 seconds from time 10), message should be dropped at time 17
-	mock().expectOneCall("on_ocpp_event")
-		.withParameter("event_type", OCPP_EVENT_MESSAGE_FREE)
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.withParameter("role", OCPP_MSG_ROLE_CALL)
-		.withParameter("msg_pair", false);
-	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
+	// After second timeout, message should be dropped at time 17
+	expect_event(OCPP_EVENT_MESSAGE_FREE, OCPP_MSG_ROLE_CALL, OCPP_MSG_AUTHORIZE, false);
+	expect_recv();
 	step(17);
 
-	size_t pending = ocpp_count_pending_requests();
-	LONGS_EQUAL(0, pending);
+	LONGS_EQUAL(0, ocpp_count_pending_requests());
 }
 
 TEST(Core, ShouldDropNonTransactionRelatedMessagesAfterTimeout_WhenTransportErrors) {
 	go_boot_accepted(1);
 
-	const struct ocpp_Authorize auth = {
-		.idTag = "TestTag",
-	};
-
-	mock().expectOneCall("time").andReturnValue(2);
-	ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), NULL);
+	push_authorize("TestTag", 2);
 
 	// Transport errors for max retries (2 attempts)
 	// First attempt at time 3
-	mock().expectOneCall("ocpp_send")
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.ignoreOtherParameters().andReturnValue(-EIO);
-	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
+	expect_send_and_recv(OCPP_MSG_AUTHORIZE, -EIO);
 	step(3);
 
 	// Second attempt (retry) at time 10
-	mock().expectOneCall("ocpp_send")
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.ignoreOtherParameters().andReturnValue(-EIO);
-	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
-	mock().expectOneCall("on_ocpp_event")
-		.withParameter("event_type", OCPP_EVENT_MESSAGE_FREE)
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.withParameter("role", OCPP_MSG_ROLE_CALL)
-		.withParameter("msg_pair", false);
+	expect_send_and_recv(OCPP_MSG_AUTHORIZE, -EIO);
+	expect_event(OCPP_EVENT_MESSAGE_FREE, OCPP_MSG_ROLE_CALL, OCPP_MSG_AUTHORIZE, false);
 	step(10);
 
 	LONGS_EQUAL(0, ocpp_count_pending_requests());
@@ -444,23 +432,15 @@ TEST(Core, ShouldSendBootNotification_WhenRequested) {
 }
 
 TEST(Core, ShouldReturnNumberOfPendingMessages_WhenRequested) {
-	size_t initial = ocpp_count_pending_requests();
-	LONGS_EQUAL(0, initial);
+	LONGS_EQUAL(0, ocpp_count_pending_requests());
 
-	const struct ocpp_Authorize auth = {
-		.idTag = "Tag1",
-	};
-	mock().expectOneCall("time").andReturnValue(1);
-	ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), NULL);
+	push_authorize("Tag1", 1);
 
-	mock().expectOneCall("ocpp_send")
-		.ignoreOtherParameters().andReturnValue(0);
-	mock().expectOneCall("ocpp_recv")
-		.ignoreOtherParameters().andReturnValue(-ENOMSG);
+	expect_send_any();
+	expect_recv();
 	step(10);
 
-	size_t after_send = ocpp_count_pending_requests();
-	LONGS_EQUAL(1, after_send); // Waiting for response
+	LONGS_EQUAL(1, ocpp_count_pending_requests()); // Waiting for response
 }
 
 TEST(Core, ShouldReturnTypeString_WhenValidTypeGiven) {
@@ -480,17 +460,10 @@ TEST(Core, ShouldReturnMSG_MAX_WhenInvalidTypeIdGiven) {
 }
 
 TEST(Core, ShouldReturnMessage_WhenMatchingMessageIdGiven) {
-	const struct ocpp_Authorize auth = {
-		.idTag = "TestTag",
-	};
+	push_authorize("TestTag", 1);
 
-	mock().expectOneCall("time").andReturnValue(1);
-	ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), NULL);
-
-	mock().expectOneCall("ocpp_send")
-		.ignoreOtherParameters().andReturnValue(0);
-	mock().expectOneCall("ocpp_recv")
-		.ignoreOtherParameters().andReturnValue(-ENOMSG);
+	expect_send_any();
+	expect_recv();
 	step(10);
 
 	// Get the message ID from mock data
@@ -508,18 +481,10 @@ TEST(Core, ShouldReturnNull_WhenNoMatchingMessageIdFound) {
 TEST(Core, ShouldKeepRequest_UntilCallbackFinishedAfterReceivingResponse) {
 	go_boot_accepted(1);
 
-	const struct ocpp_Authorize auth = {
-		.idTag = "TestTag",
-	};
-
-	mock().expectOneCall("time").andReturnValue(2);
-	ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), NULL);
+	push_authorize("TestTag", 2);
 
 	// Send at time 3
-	mock().expectOneCall("ocpp_send")
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.ignoreOtherParameters().andReturnValue(0);
-	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
+	expect_send_and_recv(OCPP_MSG_AUTHORIZE);
 	step(3);
 
 	// Receive response at time 4 (within TX timeout of 5 seconds)
@@ -528,35 +493,19 @@ TEST(Core, ShouldKeepRequest_UntilCallbackFinishedAfterReceivingResponse) {
 	mock().setData("expected_type", (int)OCPP_MSG_AUTHORIZE);
 	mock().setData("expected_msgid", mock().getData("expected_msgid").getStringValue());
 
-	mock().expectOneCall("ocpp_recv").andReturnValue(0);
-	mock().expectOneCall("on_ocpp_event")
-		.withParameter("event_type", OCPP_EVENT_MESSAGE_INCOMING)
-		.withParameter("role", OCPP_MSG_ROLE_CALLRESULT)
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.withParameter("msg_pair", true); // Request still exists during incoming event
-	mock().expectOneCall("on_ocpp_event")
-		.withParameter("event_type", OCPP_EVENT_MESSAGE_FREE)
-		.withParameter("role", OCPP_MSG_ROLE_CALL)
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.withParameter("msg_pair", false); // Request freed after processing
+	expect_recv(0);
+	expect_event(OCPP_EVENT_MESSAGE_INCOMING, OCPP_MSG_ROLE_CALLRESULT, OCPP_MSG_AUTHORIZE, true);
+	expect_event(OCPP_EVENT_MESSAGE_FREE, OCPP_MSG_ROLE_CALL, OCPP_MSG_AUTHORIZE, false);
 	step(4);
 }
 
 TEST(Core, ShouldDeleteRequest_AfterCallbackFinished) {
 	go_boot_accepted(1);
 
-	const struct ocpp_Authorize auth = {
-		.idTag = "TestTag",
-	};
-
-	mock().expectOneCall("time").andReturnValue(2);
-	ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), NULL);
+	push_authorize("TestTag", 2);
 
 	// Send at time 3
-	mock().expectOneCall("ocpp_send")
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.ignoreOtherParameters().andReturnValue(0);
-	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
+	expect_send_and_recv(OCPP_MSG_AUTHORIZE);
 	step(3);
 
 	const char *msgid = mock().getData("expected_msgid").getStringValue();
@@ -566,22 +515,13 @@ TEST(Core, ShouldDeleteRequest_AfterCallbackFinished) {
 	mock().setData("expected_type", (int)OCPP_MSG_AUTHORIZE);
 	mock().setData("expected_msgid", msgid);
 
-	mock().expectOneCall("ocpp_recv").andReturnValue(0);
-	mock().expectOneCall("on_ocpp_event")
-		.withParameter("event_type", OCPP_EVENT_MESSAGE_INCOMING)
-		.withParameter("role", OCPP_MSG_ROLE_CALLRESULT)
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.withParameter("msg_pair", true);
-	mock().expectOneCall("on_ocpp_event")
-		.withParameter("event_type", OCPP_EVENT_MESSAGE_FREE)
-		.withParameter("role", OCPP_MSG_ROLE_CALL)
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.withParameter("msg_pair", false);
+	expect_recv(0);
+	expect_event(OCPP_EVENT_MESSAGE_INCOMING, OCPP_MSG_ROLE_CALLRESULT, OCPP_MSG_AUTHORIZE, true);
+	expect_event(OCPP_EVENT_MESSAGE_FREE, OCPP_MSG_ROLE_CALL, OCPP_MSG_AUTHORIZE, false);
 	step(4);
 
 	// After callback, message should be deleted
-	struct ocpp_message *msg = ocpp_get_message_by_id(msgid);
-	POINTERS_EQUAL(NULL, msg);
+	POINTERS_EQUAL(NULL, ocpp_get_message_by_id(msgid));
 }
 
 TEST(Core, ShouldFindMessageInWaitList_AfterSending) {
@@ -590,10 +530,8 @@ TEST(Core, ShouldFindMessageInWaitList_AfterSending) {
 	mock().expectOneCall("time").andReturnValue(1);
 	ocpp_push_request(OCPP_MSG_HEARTBEAT, &hb, sizeof(hb), NULL);
 
-	mock().expectOneCall("ocpp_send")
-		.ignoreOtherParameters().andReturnValue(0);
-	mock().expectOneCall("ocpp_recv")
-		.ignoreOtherParameters().andReturnValue(-ENOMSG);
+	expect_send_any();
+	expect_recv();
 	step(10);
 
 	// Message should be in wait list
@@ -604,31 +542,18 @@ TEST(Core, ShouldFindMessageInWaitList_AfterSending) {
 }
 
 TEST(Core, ShouldRetryMessage_WhenMaxAttemptsNotReached) {
-	const struct ocpp_Authorize auth = {
-		.idTag = "TestTag",
-	};
-
-	mock().expectOneCall("time").andReturnValue(1);
-	ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), NULL);
+	push_authorize("TestTag", 1);
 
 	// First attempt fails
-	mock().expectOneCall("ocpp_send")
-		.ignoreOtherParameters().andReturnValue(-EIO);
-	mock().expectOneCall("ocpp_recv")
-		.ignoreOtherParameters().andReturnValue(-ENOMSG);
+	expect_send_any(-EIO);
+	expect_recv();
 	step(10);
 
 	// Should retry (second attempt)
-	mock().expectOneCall("ocpp_send")
-		.withParameter("type", OCPP_MSG_AUTHORIZE)
-		.ignoreOtherParameters().andReturnValue(0);
-	mock().expectOneCall("ocpp_recv")
-		.ignoreOtherParameters().andReturnValue(-ENOMSG);
+	expect_send_and_recv(OCPP_MSG_AUTHORIZE);
 	step(20);
 
-	// Message should still be waiting
-	size_t pending = ocpp_count_pending_requests();
-	LONGS_EQUAL(1, pending);
+	LONGS_EQUAL(1, ocpp_count_pending_requests()); // Should still be waiting
 }
 
 TEST(Core, ShouldSendCallError_WhenRecvReturnsError) {
@@ -905,4 +830,169 @@ TEST(Core, ShouldSendHeartBeat_WhenElapsedTimeEqualsIntervalFromRxMessage) {
 TEST(Core, ShouldSendHeartBeat_WhenElapsedTimeExceedsIntervalFromRxMessage) {
 	// Similar to above - rx timestamp is used
 	CHECK(true);
+}
+
+// Edge cases and error handling tests
+
+TEST(Core, ShouldAcceptNullData_WithNonZeroSize) {
+	// NULL data with non-zero size is valid (no payload will be allocated)
+	mock().expectOneCall("time").andReturnValue(1);
+	int rc = ocpp_push_request(OCPP_MSG_AUTHORIZE, NULL, 100, NULL);
+	CHECK_EQUAL(0, rc);
+}
+
+TEST(Core, ShouldAcceptZeroSizeData_WithNonNullPointer) {
+	const struct ocpp_Authorize auth = {
+		.idTag = "Tag",
+	};
+
+	// Non-NULL data with zero size is valid (no payload will be allocated)
+	mock().expectOneCall("time").andReturnValue(1);
+	int rc = ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, 0, NULL);
+	CHECK_EQUAL(0, rc);
+}
+
+TEST(Core, ShouldHandleEmptyPayload_InReceivedMessage) {
+	go_boot_accepted(1);
+
+	const struct ocpp_Authorize auth = {
+		.idTag = "Tag",
+	};
+
+	mock().expectOneCall("time").andReturnValue(2);
+	ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), NULL);
+
+	mock().expectOneCall("ocpp_send")
+		.withParameter("type", OCPP_MSG_AUTHORIZE)
+		.ignoreOtherParameters().andReturnValue(0);
+	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
+	step(3);
+
+	// Receive response with empty payload (payload_size = 0)
+	mock().setData("expected_role", (int)OCPP_MSG_ROLE_CALLRESULT);
+	mock().setData("expected_type", (int)OCPP_MSG_AUTHORIZE);
+	mock().setData("expected_msgid", mock().getData("expected_msgid").getStringValue());
+	mock().setData("expected_payload_size", 0); // Empty payload
+
+	mock().expectOneCall("ocpp_recv").andReturnValue(0);
+	mock().expectOneCall("on_ocpp_event")
+		.withParameter("event_type", OCPP_EVENT_MESSAGE_INCOMING)
+		.withParameter("role", OCPP_MSG_ROLE_CALLRESULT)
+		.withParameter("type", OCPP_MSG_AUTHORIZE)
+		.withParameter("msg_pair", true);
+	mock().expectOneCall("on_ocpp_event")
+		.withParameter("event_type", OCPP_EVENT_MESSAGE_FREE)
+		.withParameter("role", OCPP_MSG_ROLE_CALL)
+		.withParameter("type", OCPP_MSG_AUTHORIZE)
+		.withParameter("msg_pair", false);
+	step(4);
+
+	// Should complete successfully even with empty payload
+	size_t pending = ocpp_count_pending_requests();
+	LONGS_EQUAL(0, pending);
+}
+
+TEST(Core, ShouldStoreMultipleMessagesToBackend) {
+	go_boot_accepted(1);
+
+	// Push multiple messages - they go to backend storage
+	push_authorize("Tag1", 2, (void*)1);
+	push_authorize("Tag2", 2, (void*)2);
+	push_authorize("Tag3", 2, (void*)3);
+
+	// Messages are in backend storage, not yet in pending queues
+	LONGS_EQUAL(0, ocpp_count_pending_requests());
+	LONGS_EQUAL(3, ocpp_count_stored_requests());
+}
+
+TEST(Core, ShouldProcessMessagesInFIFOOrder) {
+	go_boot_accepted(1);
+
+	push_authorize("First", 2);
+	push_authorize("Second", 2);
+
+	// First message should be loaded from backend and sent first
+	mock().expectOneCall("ocpp_send")
+		.withParameter("type", OCPP_MSG_AUTHORIZE)
+		.ignoreOtherParameters().andReturnValue(0);
+	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
+	step(3);
+
+	// First in wait queue (backend message only dropped when freed)
+	LONGS_EQUAL(1, ocpp_count_pending_requests());
+	// Backend still has both messages (drop happens when message is freed)
+	LONGS_EQUAL(2, ocpp_count_stored_requests());
+}
+
+TEST(Core, ShouldNotLoadNewMessage_WhileWaitingForResponse) {
+	go_boot_accepted(1);
+
+	push_authorize("First", 2);
+	push_authorize("Second", 2);
+
+	// Load and send first message
+	mock().expectOneCall("ocpp_send")
+		.withParameter("type", OCPP_MSG_AUTHORIZE)
+		.ignoreOtherParameters().andReturnValue(0);
+	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
+	step(3);
+
+	// Second message should NOT be loaded while first is waiting
+	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
+	step(4);
+
+	LONGS_EQUAL(1, ocpp_count_pending_requests());
+	// Backend still has both (drop happens when message is freed)
+	LONGS_EQUAL(2, ocpp_count_stored_requests());
+}
+
+TEST(Core, ShouldReturnNULL_WhenGettingMessageWithNullId) {
+	go_boot_accepted(1);
+
+	struct ocpp_message *msg = ocpp_get_message_by_id(NULL);
+	POINTERS_EQUAL(NULL, msg);
+}
+
+TEST(Core, ShouldReturnNULL_WhenGettingMessageWithEmptyId) {
+	go_boot_accepted(1);
+
+	struct ocpp_message *msg = ocpp_get_message_by_id("");
+	POINTERS_EQUAL(NULL, msg);
+}
+
+TEST(Core, ShouldHandleMessageWithMaxLengthId) {
+	go_boot_accepted(1);
+
+	const struct ocpp_Authorize auth = { .idTag = "Tag" };
+
+	mock().expectOneCall("time").andReturnValue(2);
+	ocpp_push_request(OCPP_MSG_AUTHORIZE, &auth, sizeof(auth), NULL);
+
+	mock().expectOneCall("ocpp_send")
+		.withParameter("type", OCPP_MSG_AUTHORIZE)
+		.ignoreOtherParameters().andReturnValue(0);
+	mock().expectOneCall("ocpp_recv").andReturnValue(-ENOMSG);
+	step(3);
+
+	// Get the message ID (should be within max length)
+	const char *msgid = mock().getData("expected_msgid").getStringValue();
+	CHECK(strlen(msgid) <= OCPP_MESSAGE_ID_MAXLEN);
+
+	// Should be able to retrieve by ID
+	struct ocpp_message *msg = ocpp_get_message_by_id(msgid);
+	CHECK(msg != NULL);
+}
+
+TEST(Core, ShouldReturn0_WhenCountingPendingWithNoMessages) {
+	go_boot_accepted(1);
+
+	size_t pending = ocpp_count_pending_requests();
+	LONGS_EQUAL(0, pending);
+}
+
+TEST(Core, ShouldReturn0_WhenCountingStoredWithNoMessages) {
+	go_boot_accepted(1);
+
+	size_t stored = ocpp_count_stored_requests();
+	LONGS_EQUAL(0, stored);
 }
