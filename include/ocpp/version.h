@@ -11,10 +11,10 @@
 extern "C" {
 #endif
 
-#define OCPP_VERSION_STRING	"0.0.1"
-#define OCPP_VERSION_MAJOR	0
+#define OCPP_VERSION_STRING	"1.0.0"
+#define OCPP_VERSION_MAJOR	1
 #define OCPP_VERSION_MINOR	0
-#define OCPP_VERSION_BUILD	1
+#define OCPP_VERSION_BUILD	0
 
 #if defined(__cplusplus)
 }

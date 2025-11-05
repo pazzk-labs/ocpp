@@ -75,7 +75,7 @@ static inline __attribute__((always_inline)) bool list_empty(const struct list *
 	return false;
 }
 
-static inline __attribute__((always_inline)) int list_count(struct list *head)
+static inline __attribute__((always_inline)) int list_count(const struct list *head)
 {
 	struct list *p;
 	int n = 0;
