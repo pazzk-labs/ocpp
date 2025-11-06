@@ -24,6 +24,15 @@ extern "C" {
 #include "ocpp/overrides.h"
 #include "ocpp/backend.h"
 
+/* If a response is received from the server, operate as defined in the
+ * specification (drop immediately if it is not a transaction-related message).
+ * If no response is received from the server, retry sending the message up to
+ * `OCPP_DEFAULT_TX_RETRIES` times before discarding it. If set to 0, retry
+ * indefinitely. */
+#if !defined(OCPP_DEFAULT_TX_RETRIES)
+#define OCPP_DEFAULT_TX_RETRIES			0
+#endif
+
 #if !defined(OCPP_DEFAULT_TX_TIMEOUT_SEC)
 #define OCPP_DEFAULT_TX_TIMEOUT_SEC		10
 #endif

@@ -24,10 +24,6 @@
 #define OCPP_ERROR(...)
 #endif
 
-#if !defined(OCPP_DEFAULT_TX_RETRIES)
-#define OCPP_DEFAULT_TX_RETRIES			3
-#endif
-
 #define container_of(ptr, type, member)		\
 	((type *)(void *)((char *)(ptr) - offsetof(type, member)))
 
@@ -401,7 +397,8 @@ static bool should_drop(struct message *msg)
 {
 	const uint32_t max_attempts = OCPP_DEFAULT_TX_RETRIES;
 
-	if (!is_droppable(msg) || msg->attempts < max_attempts) {
+	if (!is_droppable(msg) || !max_attempts ||
+			msg->attempts < max_attempts) {
 		return false;
 	}
 
@@ -464,20 +461,23 @@ static void send_message(struct message *msg, const time_t *now)
 
 	del_msg_ready(msg);
 
+	const struct ocpp_backend_message_header *h = &msg->body.data.header;
+
 	OCPP_INFO("tx: %s.req (%d/%d) waiting up to %lu seconds",
-			ocpp_stringify_type(msg->body.data.header.type),
+			ocpp_stringify_type(h->type),
 			msg->attempts, OCPP_DEFAULT_TX_RETRIES,
 			(unsigned long)(msg->expiry - *now));
 
 	if (ocpp_send(&msg->body) == 0) {
-		if (msg->body.data.header.role == OCPP_MSG_ROLE_CALL) {
+		if (h->role == OCPP_MSG_ROLE_CALL) {
 			put_msg_wait(msg);
 			return;
 		}
 	} else {
-		if (msg->body.data.header.type == OCPP_MSG_BOOTNOTIFICATION ||
-				msg->attempts < OCPP_DEFAULT_TX_RETRIES ||
-				is_transaction_related(msg)) {
+		if (OCPP_DEFAULT_TX_RETRIES == 0 ||
+				is_transaction_related(msg) ||
+				h->type == OCPP_MSG_BOOTNOTIFICATION ||
+				msg->attempts < OCPP_DEFAULT_TX_RETRIES) {
 			put_msg_wait(msg);
 			return;
 		}
